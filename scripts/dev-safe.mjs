@@ -45,15 +45,15 @@ const DEFAULT_BACKEND_PORT = SHARED_DEFAULTS.ports.agentServer;
 export const VSCODE_BASE_PATH = SHARED_DEFAULTS.paths.vscodeBasePath;
 const DEFAULT_VITE_PORT = 3001;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
-const DEFAULT_AGENT_SERVER_PACKAGE = SHARED_DEFAULTS.packages.agentServer;
-const AGENT_SERVER_GIT_REPO = "https://github.com/OpenHands/software-agent-sdk";
+const AGENT_SERVER_GIT_REPO = "https://github.com/Expertium/software-agent-sdk";
+export const DEFAULT_AGENT_SERVER_GIT_REF =
+  "5d76913e64f942065366969a1063a97bf5728ca0";
 const LOCAL_AGENT_SERVER_SUBDIRS = [
   "openhands-agent-server",
   "openhands-sdk",
   "openhands-tools",
   "openhands-workspace",
 ];
-const DEFAULT_AGENT_SERVER_VERSION = SHARED_DEFAULTS.versions.agentServer;
 const DEFAULT_AGENT_SERVER_TELEMETRY_POSTHOG_API_KEY =
   SHARED_DEFAULTS.telemetry.posthogApiKey;
 const DEFAULT_AGENT_SERVER_TELEMETRY_POSTHOG_HOST =
@@ -419,9 +419,9 @@ export const AGENT_SERVER_IMPORT_MODULES = "canvas_ui_tool";
  * - OH_AGENT_SERVER_GIT_REF: Git commit SHA or branch name
  * - OH_AGENT_SERVER_VERSION: Specific PyPI version (e.g., "1.54.0")
  *
- * If none are set, defaults to the released version specified by
- * DEFAULT_AGENT_SERVER_VERSION. Set OH_AGENT_SERVER_GIT_REF to use a
- * git branch or commit instead.
+ * If none are set, uses the Expertium SDK fork at
+ * DEFAULT_AGENT_SERVER_GIT_REF. The immutable commit keeps packaged desktop
+ * builds aligned with the SDK fixes validated in this fork.
  *
  * @param {Record<string, string | undefined>} env
  * @returns {{ command: string, args: string[], source: string }}
@@ -499,21 +499,23 @@ export function buildAgentServerCommand(env = process.env) {
     uvxArgs.push("agent-server");
     source = `PyPI (${version})`;
   } else {
-    // Default to released PyPI version
-    // Pin all SDK packages to the same version for consistency
+    // Keep all SDK workspace packages on one immutable tested fork revision.
+    const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${DEFAULT_AGENT_SERVER_GIT_REF}`;
     uvxArgs.push(
+      "--reinstall",
       "--from",
-      `${DEFAULT_AGENT_SERVER_PACKAGE}==${DEFAULT_AGENT_SERVER_VERSION}`,
+      `${baseGitUrl}#subdirectory=openhands-agent-server`,
       "--with",
-      `openhands-sdk==${DEFAULT_AGENT_SERVER_VERSION}`,
+      `${baseGitUrl}#subdirectory=openhands-sdk`,
       "--with",
-      `openhands-tools==${DEFAULT_AGENT_SERVER_VERSION}`,
+      `${baseGitUrl}#subdirectory=openhands-tools`,
       "--with",
-      `openhands-workspace==${DEFAULT_AGENT_SERVER_VERSION}`,
+      `${baseGitUrl}#subdirectory=openhands-workspace`,
+      "--with",
+      AGENT_SERVER_POSTHOG_CONSTRAINT,
+      "agent-server",
     );
-    uvxArgs.push("--with", AGENT_SERVER_POSTHOG_CONSTRAINT);
-    uvxArgs.push("agent-server");
-    source = `PyPI (${DEFAULT_AGENT_SERVER_VERSION}, default)`;
+    source = `Expertium SDK fork (${DEFAULT_AGENT_SERVER_GIT_REF})`;
   }
 
   // Everything after the executable name is an agent-server CLI argument.

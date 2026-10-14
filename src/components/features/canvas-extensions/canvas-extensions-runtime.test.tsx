@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useArchivedConversationsStore } from "#/stores/archived-conversations-store";
+
 import CanvasExtensionsService from "#/api/canvas-extensions-service";
 import {
   setActiveSelection,
@@ -108,6 +110,32 @@ describe("CanvasExtensionsRuntimeProvider", () => {
     vi.restoreAllMocks();
     setActiveSelection(null);
     setRegisteredBackends([]);
+    useArchivedConversationsStore
+      .getState()
+      .removeArchivedConversation(backend.id, "archived-conversation");
+  });
+
+  it("exposes archived conversation state only for the active backend", async () => {
+    useArchivedConversationsStore.getState().archiveConversation(
+      backend.id,
+      "archived-conversation",
+    );
+    let isArchived = false;
+    const moduleLoader = vi.fn().mockImplementation(async () => ({
+      activate: (host: CanvasExtensionHost) => {
+        isArchived =
+          host.isConversationArchived?.("archived-conversation") ?? false;
+      },
+    }));
+
+    renderRuntime(moduleLoader);
+
+    await waitFor(() => expect(isArchived).toBe(true));
+    expect(
+      useArchivedConversationsStore
+        .getState()
+        .isArchived("another-backend", "archived-conversation"),
+    ).toBe(false);
   });
 
   it("activates enabled extensions and admits declared page registrations", async () => {

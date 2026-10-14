@@ -16,6 +16,7 @@ import {
   type CanvasExtensionPageMount,
   type InstalledCanvasExtensionInfo,
 } from "#/types/canvas-extension";
+import { useArchivedConversationsStore } from "#/stores/archived-conversations-store";
 
 export interface RegisteredCanvasExtensionPage {
   extension: InstalledCanvasExtensionInfo;
@@ -210,6 +211,10 @@ export function CanvasExtensionsRuntimeProvider({
             kind: backend.kind,
             orgId,
           }),
+          isConversationArchived: (conversationId) =>
+            useArchivedConversationsStore
+              .getState()
+              .isArchived(backend.id, conversationId),
           registerPage: (contributionId, mount) => {
             if (registeredPages.has(contributionId)) {
               throw new Error(

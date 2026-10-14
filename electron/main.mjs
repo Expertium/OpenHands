@@ -54,7 +54,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
-import { isExternalBrowsableUrl, isLoopbackAppUrl } from "./lib/window-url-policy.mjs";
+import {
+  isExternalBrowsableUrl,
+  isLoopbackAppUrl,
+} from "./lib/window-url-policy.mjs";
 import { resolveBundledRuntimeDir } from "./lib/bundled-runtime-dir.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -91,7 +94,20 @@ const appIconPath = join(
 // icon. Must match appId in electron-builder.config.mjs, and must be set
 // before any BrowserWindow is created.
 if (process.platform === "win32") {
-  app.setAppUserModelId("dev.openhands.agent-canvas");
+  app.setAppUserModelId("dev.expertium.openhands-agent-canvas");
+}
+
+if (app.isPackaged) {
+  app.setName("OpenHands Expertium Fork");
+}
+
+// The fork is installed side-by-side, but deliberately reuses the official
+// renderer profile so localStorage preferences and backend selection carry over.
+if (app.isPackaged) {
+  app.setPath(
+    "userData",
+    join(app.getPath("appData"), "OpenHands Agent Canvas"),
+  );
 }
 
 // ── Bundled uv ────────────────────────────────────────────────────────────────
@@ -679,7 +695,7 @@ async function startStack() {
   //   onServiceLog: stream uvx/agent-server output to the loading window so
   //     the user sees progress instead of an indefinite spinner.
   const result = await main({
-    bannerTitle: "OpenHands Agent Canvas",
+    bannerTitle: "OpenHands Expertium Fork",
     staticMode: true,
     staticDir: buildDir,
     mode: "agent-canvas",
@@ -780,7 +796,7 @@ app.whenReady().then(async () => {
       ? `\n\nRecent service errors:\n${recentServiceErrors.join("\n")}`
       : "";
     dialog.showErrorBox(
-      "OpenHands Agent Canvas failed to start",
+      "OpenHands Expertium Fork failed to start",
       summary + errorTail,
     );
     app.quit();
