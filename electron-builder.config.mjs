@@ -472,6 +472,7 @@ const config = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
+    shortcutName: "OpenHands Expertium Fork",
     // Keep the downloadable installer distinct from the official app.
     // ${version}/${ext} are electron-builder macros, not JS interpolation.
     artifactName: "OpenHands-Expertium-Fork-Setup-${version}.${ext}",
