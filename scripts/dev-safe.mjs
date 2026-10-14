@@ -46,14 +46,16 @@ export const VSCODE_BASE_PATH = SHARED_DEFAULTS.paths.vscodeBasePath;
 const DEFAULT_VITE_PORT = 3001;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_AGENT_SERVER_PACKAGE = SHARED_DEFAULTS.packages.agentServer;
-const AGENT_SERVER_GIT_REPO = "https://github.com/OpenHands/software-agent-sdk";
+const AGENT_SERVER_GIT_REPO = "https://github.com/Expertium/software-agent-sdk";
+// Fork commit that registers TerminalRecoverObservation on terminal package import.
+export const DEFAULT_AGENT_SERVER_GIT_REF =
+  "71834fd00c62d292c1d441a4cfe00485bafb99b7";
 const LOCAL_AGENT_SERVER_SUBDIRS = [
   "openhands-agent-server",
   "openhands-sdk",
   "openhands-tools",
   "openhands-workspace",
 ];
-const DEFAULT_AGENT_SERVER_VERSION = SHARED_DEFAULTS.versions.agentServer;
 const DEFAULT_AGENT_SERVER_TELEMETRY_POSTHOG_API_KEY =
   SHARED_DEFAULTS.telemetry.posthogApiKey;
 const DEFAULT_AGENT_SERVER_TELEMETRY_POSTHOG_HOST =
@@ -407,6 +409,24 @@ export function validateFrontendDependencies(
  */
 export const AGENT_SERVER_IMPORT_MODULES = "canvas_ui_tool";
 
+function buildGitUvxArgs(gitRef) {
+  const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${gitRef}`;
+  return [
+    "--reinstall",
+    "--from",
+    `${baseGitUrl}#subdirectory=openhands-agent-server`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-sdk`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-tools`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-workspace`,
+    "--with",
+    AGENT_SERVER_POSTHOG_CONSTRAINT,
+    "agent-server",
+  ];
+}
+
 /**
  * Build the uvx command and arguments for running agent-server.
  *
@@ -419,9 +439,8 @@ export const AGENT_SERVER_IMPORT_MODULES = "canvas_ui_tool";
  * - OH_AGENT_SERVER_GIT_REF: Git commit SHA or branch name
  * - OH_AGENT_SERVER_VERSION: Specific PyPI version (e.g., "1.54.0")
  *
- * If none are set, defaults to the released version specified by
- * DEFAULT_AGENT_SERVER_VERSION. Set OH_AGENT_SERVER_GIT_REF to use a
- * git branch or commit instead.
+ * If none are set, defaults to the SDK fork commit pinned by
+ * DEFAULT_AGENT_SERVER_GIT_REF.
  *
  * @param {Record<string, string | undefined>} env
  * @returns {{ command: string, args: string[], source: string }}
@@ -465,21 +484,7 @@ export function buildAgentServerCommand(env = process.env) {
     // string as the current PyPI release (e.g. both "1.26.0"). Without it, uv
     // silently reuses the cached PyPI wheels and the git ref is never actually
     // used, even though it was explicitly requested.
-    const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${gitRef}`;
-    uvxArgs.push(
-      "--reinstall",
-      "--from",
-      `${baseGitUrl}#subdirectory=openhands-agent-server`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-sdk`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-tools`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-workspace`,
-      "--with",
-      AGENT_SERVER_POSTHOG_CONSTRAINT,
-      "agent-server",
-    );
+    uvxArgs.push(...buildGitUvxArgs(gitRef));
     source = `git (${gitRef})`;
   } else if (version) {
     // Use specific PyPI version: uvx --from openhands-agent-server==version agent-server
@@ -499,21 +504,9 @@ export function buildAgentServerCommand(env = process.env) {
     uvxArgs.push("agent-server");
     source = `PyPI (${version})`;
   } else {
-    // Default to released PyPI version
-    // Pin all SDK packages to the same version for consistency
-    uvxArgs.push(
-      "--from",
-      `${DEFAULT_AGENT_SERVER_PACKAGE}==${DEFAULT_AGENT_SERVER_VERSION}`,
-      "--with",
-      `openhands-sdk==${DEFAULT_AGENT_SERVER_VERSION}`,
-      "--with",
-      `openhands-tools==${DEFAULT_AGENT_SERVER_VERSION}`,
-      "--with",
-      `openhands-workspace==${DEFAULT_AGENT_SERVER_VERSION}`,
-    );
-    uvxArgs.push("--with", AGENT_SERVER_POSTHOG_CONSTRAINT);
-    uvxArgs.push("agent-server");
-    source = `PyPI (${DEFAULT_AGENT_SERVER_VERSION}, default)`;
+    // Default to the pinned SDK fork commit
+    uvxArgs.push(...buildGitUvxArgs(DEFAULT_AGENT_SERVER_GIT_REF));
+    source = `git (${DEFAULT_AGENT_SERVER_GIT_REF}, default)`;
   }
 
   // Everything after the executable name is an agent-server CLI argument.
