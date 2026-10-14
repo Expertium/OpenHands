@@ -6,7 +6,7 @@ describe("buildAgentServerCommand", () => {
   it("uses the tested Expertium SDK commit by default", () => {
     const { args, source } = buildAgentServerCommand({});
     const gitUrl =
-      "git+https://github.com/Expertium/software-agent-sdk@5d76913e64f942065366969a1063a97bf5728ca0";
+      "git+https://github.com/Expertium/software-agent-sdk@f1a05dae5d7a5a2e6ab795dda31aa663277f8970";
 
     expect(source).toContain("Expertium SDK fork");
     expect(args).toContain(`${gitUrl}#subdirectory=openhands-agent-server`);
