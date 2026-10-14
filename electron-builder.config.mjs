@@ -320,8 +320,8 @@ function getDirSizeBytes(dir) {
 
 /** @type {import('electron-builder').Configuration} */
 const config = {
-  appId: "dev.expertium.openhands-agent-canvas",
-  productName: "OpenHands Expertium Fork",
+  appId: "dev.expertium.openhands-agent-canvas.recovery",
+  productName: "OpenHands Expertium Recovery",
   copyright: "Copyright © 2025 OpenHands contributors",
 
   // Stamp the packaged app with the released version (see rootPackageJson
@@ -448,14 +448,13 @@ const config = {
   },
 
   dmg: {
-    title: "OpenHands Expertium Fork",
+    title: "OpenHands Expertium Recovery",
     contents: [
       { x: 130, y: 220 },
       { x: 410, y: 220, type: "link", path: "/Applications" },
     ],
     window: { width: 540, height: 380 },
-    // Keep fork release artifacts distinct from the official app download.
-    artifactName: "OpenHands-Expertium-Fork-${version}-${arch}.${ext}",
+    artifactName: "OpenHands-Expertium-Recovery-${version}-${arch}.${ext}",
   },
 
   // ── Windows ────────────────────────────────────────────────────────────────
@@ -472,10 +471,8 @@ const config = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "OpenHands Expertium Fork",
-    // Keep the downloadable installer distinct from the official app.
-    // ${version}/${ext} are electron-builder macros, not JS interpolation.
-    artifactName: "OpenHands-Expertium-Fork-Setup-${version}.${ext}",
+    shortcutName: "OpenHands Expertium Recovery",
+    artifactName: "OpenHands-Expertium-Recovery-Setup-${version}.${ext}",
   },
 
   // ── Linux ──────────────────────────────────────────────────────────────────

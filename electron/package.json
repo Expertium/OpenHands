@@ -1,6 +1,6 @@
 {
-  "name": "agent-canvas",
-  "productName": "OpenHands Expertium Fork",
+  "name": "openhands-expertium-recovery",
+  "productName": "OpenHands Expertium Recovery",
   "version": "1.0.0",
   "private": true,
   "main": "main.mjs"
