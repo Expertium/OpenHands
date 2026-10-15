@@ -474,8 +474,27 @@ describe("Conversation websocket behavior", () => {
     // The planner has no REST preload, so it replays its whole log.
     expect(queryParamsOf(planningOptions())).toEqual({ after_seq: "-1" });
     expect(planningOptions().sessionApiKey).toBe("session-key");
-    expect(mainOptions().reconnect).toEqual({ enabled: true });
-    expect(planningOptions().reconnect).toEqual({ enabled: true });
+    expect(mainOptions().reconnect).toMatchObject({ enabled: true });
+    expect(planningOptions().reconnect).toMatchObject({ enabled: true });
+    const reconnect = mainOptions().reconnect?.shouldReconnect;
+    const planningReconnect = planningOptions().reconnect?.shouldReconnect;
+    expect(reconnect).toBeTypeOf("function");
+    expect(planningReconnect).toBeTypeOf("function");
+    for (const shouldReconnect of [reconnect, planningReconnect]) {
+      expect(
+        shouldReconnect?.(
+          new CloseEvent("close", { code: 1013, reason: "frame_too_large" }),
+        ),
+      ).toBe(false);
+      expect(
+        shouldReconnect?.(
+          new CloseEvent("close", {
+            code: 1013,
+            reason: "temporary_overload",
+          }),
+        ),
+      ).toBe(true);
+    }
   });
 
   it("waits for the first history load before opening the main socket", () => {
@@ -2479,6 +2498,19 @@ describe("Conversation websocket — page visibility reconnect (#17894)", () => 
 
     expect(useErrorMessageStore.getState()).toMatchObject({
       errorMessage: `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket closed (1013): frame_too_large`,
+      errorType: "connection",
+    });
+  });
+
+  it("shows a fallback when the browser error event has no close code", () => {
+    setUserAgent(MOBILE_USER_AGENT);
+    renderProvider();
+    act(() => mainOptions().onOpen?.(new Event("open")));
+
+    act(() => mainOptions().onError?.(new Event("error")));
+
+    expect(useErrorMessageStore.getState()).toMatchObject({
+      errorMessage: `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket error; the browser did not provide a close code.`,
       errorType: "connection",
     });
   });

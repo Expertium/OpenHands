@@ -117,6 +117,19 @@ const ConversationWebSocketContext = createContext<
   ConversationWebSocketContextType | undefined
 >(undefined);
 
+function getWebSocketErrorDetail(event: Event): string {
+  if (event instanceof CloseEvent) {
+    return event.reason
+      ? `WebSocket closed (${event.code}): ${event.reason}`
+      : `WebSocket closed (${event.code}).`;
+  }
+
+  return "WebSocket error; the browser did not provide a close code.";
+}
+
+const shouldReconnectConversationSocket = (event: CloseEvent) =>
+  event.code !== 1013 || event.reason !== "frame_too_large";
+
 /**
  * Extract the text body of an echoed user `MessageEvent` for matching against
  * the optimistic pending-message queue. The server wraps the original
@@ -1122,7 +1135,10 @@ export function ConversationWebSocketProvider({
     return {
       queryParams,
       sessionApiKey,
-      reconnect: { enabled: true },
+      reconnect: {
+        enabled: true,
+        shouldReconnect: shouldReconnectConversationSocket,
+      },
       onOpen: () => {
         setMainConnectionState("OPEN");
         hasConnectedRefMain.current = true; // Mark that we've successfully connected
@@ -1142,15 +1158,10 @@ export function ConversationWebSocketProvider({
         setMainConnectionState("CLOSED");
         if (
           hasConnectedRefMain.current &&
+          // A backgrounded tab can be dropped before the debounced cleanup.
           document.visibilityState !== "hidden"
         ) {
-          const close = event as CloseEvent;
-          const detail =
-            typeof close.code === "number"
-              ? close.reason
-                ? `WebSocket closed (${close.code}): ${close.reason}`
-                : `WebSocket closed (${close.code}).`
-              : "WebSocket error; the browser did not provide a close code.";
+          const detail = getWebSocketErrorDetail(event);
           setErrorMessage(
             `${SERVER_CONNECTION_ERROR_MESSAGE}. ${detail}`,
             "connection",
@@ -1178,7 +1189,10 @@ export function ConversationWebSocketProvider({
     return {
       queryParams,
       sessionApiKey: planningApiKey,
-      reconnect: { enabled: true },
+      reconnect: {
+        enabled: true,
+        shouldReconnect: shouldReconnectConversationSocket,
+      },
       onOpen: async () => {
         setPlanningConnectionState("OPEN");
         hasConnectedRefPlanning.current = true; // Mark that we've successfully connected
@@ -1219,15 +1233,10 @@ export function ConversationWebSocketProvider({
         setPlanningConnectionState("CLOSED");
         if (
           hasConnectedRefPlanning.current &&
+          // A backgrounded tab can be dropped before the debounced cleanup.
           document.visibilityState !== "hidden"
         ) {
-          const close = event as CloseEvent;
-          const detail =
-            typeof close.code === "number"
-              ? close.reason
-                ? `WebSocket closed (${close.code}): ${close.reason}`
-                : `WebSocket closed (${close.code}).`
-              : "WebSocket error; the browser did not provide a close code.";
+          const detail = getWebSocketErrorDetail(event);
           setErrorMessage(
             `${SERVER_CONNECTION_ERROR_MESSAGE}. ${detail}`,
             "connection",
