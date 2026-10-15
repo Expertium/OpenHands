@@ -44,6 +44,9 @@ describe("RunStatusBadge", () => {
       render(<RunStatusBadge status={status} />);
 
       expect(screen.getByTestId(testId)).toBeInTheDocument();
+      if (status === AutomationRunStatus.RUNNING) {
+        expect(screen.getByTestId(testId)).not.toHaveClass("animate-spin");
+      }
     },
   );
 

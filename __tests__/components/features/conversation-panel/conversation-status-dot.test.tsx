@@ -41,12 +41,17 @@ describe("ConversationStatusDot", () => {
       "data-content",
       tooltipLabel,
     );
+    if (status === ExecutionStatus.RUNNING) {
+      expect(screen.getByTestId(testId)).not.toHaveClass("animate-pulse");
+    }
   });
 
   it("renders the unknown state for missing execution status", () => {
     renderWithProviders(<ConversationStatusDot executionStatus={undefined} />);
 
-    expect(screen.getByTestId("conversation-status-unknown")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("conversation-status-unknown"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("styled-tooltip")).toHaveAttribute(
       "data-content",
       "COMMON$STOPPED",
