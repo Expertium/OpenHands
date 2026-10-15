@@ -320,8 +320,8 @@ function getDirSizeBytes(dir) {
 
 /** @type {import('electron-builder').Configuration} */
 const config = {
-  appId: "dev.expertium.openhands-agent-canvas.stable",
-  productName: "OpenHands Expertium Stable",
+  appId: "dev.expertium.openhands-agent-canvas",
+  productName: "OpenHands Expertium Fork",
   copyright: "Copyright © 2025 OpenHands contributors",
 
   // Stamp the packaged app with the released version (see rootPackageJson
@@ -448,13 +448,13 @@ const config = {
   },
 
   dmg: {
-    title: "OpenHands Expertium Stable",
+    title: "OpenHands Expertium Fork",
     contents: [
       { x: 130, y: 220 },
       { x: 410, y: 220, type: "link", path: "/Applications" },
     ],
     window: { width: 540, height: 380 },
-    artifactName: "OpenHands-Expertium-Stable-${version}-${arch}.${ext}",
+    artifactName: "OpenHands-Expertium-Fork-${version}-${arch}.${ext}",
   },
 
   // ── Windows ────────────────────────────────────────────────────────────────
@@ -471,8 +471,8 @@ const config = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "OpenHands Expertium Stable",
-    artifactName: "OpenHands-Expertium-Stable-Setup-${version}.${ext}",
+    shortcutName: "OpenHands Expertium Fork",
+    artifactName: "OpenHands-Expertium-Fork-Setup-${version}.${ext}",
   },
 
   // ── Linux ──────────────────────────────────────────────────────────────────

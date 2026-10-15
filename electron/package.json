@@ -1,6 +1,6 @@
 {
-  "name": "openhands-expertium-stable",
-  "productName": "OpenHands Expertium Stable",
+  "name": "agent-canvas",
+  "productName": "OpenHands Expertium Fork",
   "version": "1.0.0",
   "private": true,
   "main": "main.mjs"
