@@ -47,7 +47,7 @@ const DEFAULT_VITE_PORT = 3001;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
 const AGENT_SERVER_GIT_REPO = "https://github.com/Expertium/software-agent-sdk";
 export const DEFAULT_AGENT_SERVER_GIT_REF =
-  "08c4f10ca601689290925f09228f8345d6bf9bc8";
+  "88b5a3c1f676976c82e9570c9ce81e29a597af06";
 const LOCAL_AGENT_SERVER_SUBDIRS = [
   "openhands-agent-server",
   "openhands-sdk",

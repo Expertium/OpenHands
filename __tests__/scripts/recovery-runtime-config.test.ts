@@ -34,7 +34,7 @@ describe("recovery runtime config", () => {
     expect(env.PORT).toBe(String(RECOVERY_INGRESS_PORT));
     expect(env.PORT).not.toBe("8000");
     expect(env.OH_AGENT_SERVER_GIT_REF).toBe(
-      "08c4f10ca601689290925f09228f8345d6bf9bc8",
+      "88b5a3c1f676976c82e9570c9ce81e29a597af06",
     );
     expect(env.OH_CONVERSATIONS_PATH).not.toContain("OpenHands Agent Canvas");
     expect(env.OH_PERSISTENCE_DIR).not.toContain(".openhands");
