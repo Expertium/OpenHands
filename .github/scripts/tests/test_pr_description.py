@@ -417,3 +417,11 @@ def test_repo_with_issues_still_requires_issue_reference():
     errors = validate_linked_issue_ready("## Summary\nChange.\n", issues_enabled=True)
     assert len(errors) == 1
     assert "Link an issue" in errors[0]
+
+def test_expertium_pr_template_does_not_require_issue_reference():
+    body = "## Summary\nManual release workflow trigger.\n"
+    assert validate_linked_issue_ready(
+        body,
+        repo="Expertium/OpenHands",
+        token="unused",
+    ) == []
