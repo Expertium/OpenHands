@@ -19,6 +19,7 @@ export interface WebSocketHookOptions {
   reconnect?: {
     enabled?: boolean;
     maxAttempts?: number;
+    shouldReconnect?: (event: CloseEvent) => boolean;
   };
 }
 
@@ -117,14 +118,17 @@ export const useWebSocket = (url: string, options?: WebSocketHookOptions) => {
 
       // Attempt reconnection if enabled and allowed
       // IMPORTANT: Only reconnect if this specific instance is allowed to reconnect
-      const reconnectEnabled = optionsRef.current?.reconnect?.enabled ?? false;
-      const maxAttempts =
-        optionsRef.current?.reconnect?.maxAttempts ?? Infinity;
+      const reconnectOptions = optionsRef.current?.reconnect;
+      const reconnectEnabled = reconnectOptions?.enabled ?? false;
+      const maxAttempts = reconnectOptions?.maxAttempts ?? Infinity;
+      const shouldReconnect =
+        reconnectOptions?.shouldReconnect?.(event) ?? true;
 
       if (
         reconnectEnabled &&
         canReconnect &&
         shouldReconnectRef.current &&
+        shouldReconnect &&
         attemptCountRef.current < maxAttempts
       ) {
         setIsReconnecting(true);

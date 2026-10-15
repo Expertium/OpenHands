@@ -97,13 +97,13 @@ const recoveryRuntime = configureRecoveryRuntime({
 });
 Object.assign(process.env, recoveryRuntime.env);
 
-// Match electron-builder's recovery-specific AppUserModelId for Windows taskbar grouping.
+// Match electron-builder's stable-channel AppUserModelId for Windows taskbar grouping.
 if (process.platform === "win32") {
-  app.setAppUserModelId("dev.expertium.openhands-agent-canvas.recovery");
+  app.setAppUserModelId("dev.expertium.openhands-agent-canvas.stable");
 }
 
 app.setPath("userData", recoveryRuntime.userDataPath);
-app.setName("OpenHands Expertium Recovery");
+app.setName("OpenHands Expertium Stable");
 
 // ── Bundled uv ────────────────────────────────────────────────────────────────
 
@@ -690,7 +690,7 @@ async function startStack() {
   //   onServiceLog: stream uvx/agent-server output to the loading window so
   //     the user sees progress instead of an indefinite spinner.
   const result = await main({
-    bannerTitle: "OpenHands Expertium Recovery",
+    bannerTitle: "OpenHands Expertium Stable",
     staticMode: true,
     staticDir: buildDir,
     mode: "agent-canvas",
@@ -787,7 +787,7 @@ app.whenReady().then(async () => {
       ? `\n\nRecent service errors:\n${recentServiceErrors.join("\n")}`
       : "";
     dialog.showErrorBox(
-      "OpenHands Expertium Recovery failed to start",
+      "OpenHands Expertium Stable failed to start",
       summary + errorTail,
     );
     app.quit();

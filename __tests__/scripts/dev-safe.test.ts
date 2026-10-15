@@ -507,27 +507,29 @@ describe("buildAgentServerTelemetryEnv", () => {
 });
 
 describe("buildAgentServerCommand", () => {
-  it("uses released PyPI version by default with all packages pinned", () => {
+  it("uses the pinned Expertium SDK fork commit by default", () => {
     const cmd = buildAgentServerCommand({});
+    const ref = "88b5a3c1f676976c82e9570c9ce81e29a597af06";
+    const base = `git+https://github.com/Expertium/software-agent-sdk@${ref}`;
 
     expect(cmd.command).toBe("uvx");
-    // Defaults to the released PyPI version with all SDK packages pinned to same version
     expect(cmd.args).toEqual([
+      "--reinstall",
       "--from",
-      "openhands-agent-server==1.54.0",
+      `${base}#subdirectory=openhands-agent-server`,
       "--with",
-      "openhands-sdk==1.54.0",
+      `${base}#subdirectory=openhands-sdk`,
       "--with",
-      "openhands-tools==1.54.0",
+      `${base}#subdirectory=openhands-tools`,
       "--with",
-      "openhands-workspace==1.54.0",
+      `${base}#subdirectory=openhands-workspace`,
       "--with",
       "posthog>=6,<7",
       "agent-server",
       "--import-modules",
       "canvas_ui_tool",
     ]);
-    expect(cmd.source).toBe("PyPI (1.54.0, default)");
+    expect(cmd.source).toBe(`Expertium SDK fork (${ref})`);
   });
 
   it("uses specific PyPI version when OH_AGENT_SERVER_VERSION is set with all packages pinned", () => {
@@ -563,13 +565,13 @@ describe("buildAgentServerCommand", () => {
     expect(cmd.args).toEqual([
       "--reinstall",
       "--from",
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-sdk",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-sdk",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-tools",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-tools",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-workspace",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-workspace",
       "--with",
       "posthog>=6,<7",
       "agent-server",
@@ -586,13 +588,13 @@ describe("buildAgentServerCommand", () => {
     expect(cmd.args).toEqual([
       "--reinstall",
       "--from",
-      "git+https://github.com/OpenHands/software-agent-sdk@abc1234#subdirectory=openhands-agent-server",
+      "git+https://github.com/Expertium/software-agent-sdk@abc1234#subdirectory=openhands-agent-server",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@abc1234#subdirectory=openhands-sdk",
+      "git+https://github.com/Expertium/software-agent-sdk@abc1234#subdirectory=openhands-sdk",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@abc1234#subdirectory=openhands-tools",
+      "git+https://github.com/Expertium/software-agent-sdk@abc1234#subdirectory=openhands-tools",
       "--with",
-      "git+https://github.com/OpenHands/software-agent-sdk@abc1234#subdirectory=openhands-workspace",
+      "git+https://github.com/Expertium/software-agent-sdk@abc1234#subdirectory=openhands-workspace",
       "--with",
       "posthog>=6,<7",
       "agent-server",
@@ -611,7 +613,7 @@ describe("buildAgentServerCommand", () => {
     expect(cmd.command).toBe("uvx");
     expect(cmd.args).toContain("--from");
     expect(cmd.args).toContain(
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
     );
     expect(cmd.args).not.toContain("openhands-agent-server==1.18.0");
   });
@@ -651,7 +653,7 @@ describe("buildAgentServerCommand", () => {
     expect(cmd.source).toBe(`local (${sdk})`);
     expect(cmd.args).toContain(path.join(sdk, "openhands-agent-server"));
     expect(cmd.args).not.toContain(
-      "git+https://github.com/OpenHands/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
+      "git+https://github.com/Expertium/software-agent-sdk@feature-branch#subdirectory=openhands-agent-server",
     );
     expect(cmd.args).not.toContain("openhands-agent-server==1.18.0");
   });
