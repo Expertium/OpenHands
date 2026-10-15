@@ -85,7 +85,7 @@ BARE_ISSUE_REF_RE = re.compile(r"(?<!\w)#(\d+)")
 READY_FOR_DEV_LABEL = "ready-for-dev"
 BUG_LABEL = "bug"
 ENHANCEMENT_LABEL = "enhancement"
-HUMAN_NOTE_EXEMPT_OWNERS = {"Expertium"}
+PR_TEMPLATE_EXEMPT_OWNERS = {"Expertium"}
 
 # PR Type checkboxes in the `## Type` section. We capture which type the author
 # checked so we can cross-check it against the linked issue's labels.
@@ -312,7 +312,9 @@ def validate_linked_issue_ready(
     skipped.
     """
     errors: list[str] = []
-    if not issues_enabled:
+    if not issues_enabled or (
+        repo and repo.partition("/")[0] in PR_TEMPLATE_EXEMPT_OWNERS
+    ):
         return errors
 
     numbers = extract_linked_issue_numbers(body)
@@ -383,7 +385,8 @@ def validate_pr_body(
 ) -> list[str]:
     errors: list[str] = []
     repository_owner = repository.partition("/")[0] if repository else None
-    human_note_required = repository_owner not in HUMAN_NOTE_EXEMPT_OWNERS
+    template_exempt = repository_owner in PR_TEMPLATE_EXEMPT_OWNERS
+    human_note_required = not template_exempt
 
     if human_note_required and first_visible_line(body) != "HUMAN:":
         errors.append("The first visible line of the PR description must be `HUMAN:`.")
