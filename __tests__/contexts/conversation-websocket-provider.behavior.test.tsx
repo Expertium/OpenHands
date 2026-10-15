@@ -384,6 +384,7 @@ describe("Conversation websocket behavior", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     window.localStorage.clear();
   });
@@ -679,6 +680,7 @@ describe("Conversation websocket behavior", () => {
   });
 
   it("reports the main socket lifecycle and only surfaces errors after a successful connection", () => {
+    vi.useFakeTimers();
     renderProvider();
 
     act(() => mainOptions().onError?.(new Event("error")));
@@ -696,6 +698,44 @@ describe("Conversation websocket behavior", () => {
     expect(screen.getByTestId("connection-state")).toHaveTextContent("CLOSED");
 
     act(() => mainOptions().onError?.(new Event("error")));
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+
+    act(() => vi.advanceTimersByTime(3_000));
+    expect(useErrorMessageStore.getState()).toMatchObject({
+      errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
+      errorType: "connection",
+    });
+  });
+
+  it("suppresses a transient main socket error that recovers before the grace period", () => {
+    vi.useFakeTimers();
+    renderProvider();
+    act(() => mainOptions().onOpen?.(new Event("open")));
+
+    act(() => mainOptions().onError?.(new Event("error")));
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(1_500);
+      mainOptions().onOpen?.(new Event("open"));
+      vi.advanceTimersByTime(2_000);
+    });
+
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+  });
+
+  it("shows a connection error only after a sustained main socket outage", () => {
+    vi.useFakeTimers();
+    renderProvider();
+    act(() => mainOptions().onOpen?.(new Event("open")));
+
+    act(() => {
+      mainOptions().onError?.(new Event("error"));
+      vi.advanceTimersByTime(2_999);
+    });
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+
+    act(() => vi.advanceTimersByTime(1));
     expect(useErrorMessageStore.getState()).toMatchObject({
       errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
       errorType: "connection",
@@ -726,7 +766,14 @@ describe("Conversation websocket behavior", () => {
     act(() => mainOptions().onClose?.(new CloseEvent("close")));
     expect(screen.getByTestId("connection-state")).toHaveTextContent("CLOSED");
 
-    act(() => planningOptions().onError?.(new Event("error")));
+    vi.useFakeTimers();
+    act(() => {
+      mainOptions().onError?.(new Event("error"));
+      planningOptions().onError?.(new Event("error"));
+    });
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+
+    act(() => vi.advanceTimersByTime(3_000));
     expect(useErrorMessageStore.getState()).toMatchObject({
       errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
       errorType: "connection",
@@ -2439,13 +2486,15 @@ describe("Conversation websocket — page visibility reconnect (#17894)", () => 
     act(() => setVisibility("visible"));
   });
 
-  it("still surfaces the connection-error banner for a drop that happens while visible", () => {
+  it("surfaces a visible connection error only after the outage grace period", () => {
     setUserAgent(MOBILE_USER_AGENT);
     renderProvider();
     act(() => mainOptions().onOpen?.(new Event("open")));
 
     act(() => mainOptions().onError?.(new Event("error")));
+    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
 
+    act(() => vi.advanceTimersByTime(3_000));
     expect(useErrorMessageStore.getState()).toMatchObject({
       errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
       errorType: "connection",
