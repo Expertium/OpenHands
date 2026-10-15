@@ -17,6 +17,7 @@ import type { Backend } from "#/api/backend-registry/types";
 import { ActiveBackendProvider } from "#/contexts/active-backend-context";
 import { PinnedAutomationsDashboard } from "#/components/features/home/featured-automations/pinned-automations-dashboard";
 import { RunningAutomationsList } from "#/components/features/home/featured-automations/running-automations-list";
+import { AutomationRunActivitySparkline } from "#/components/features/home/featured-automations/automation-run-activity-sparkline";
 import { NavigationProvider } from "#/context/navigation-context";
 import { HOME_PINNED_AUTOMATIONS_KEY } from "#/hooks/use-home-pinned-automations";
 import { AUTOMATION_STACK_SECTION_BOTTOM_CLASS } from "#/utils/automation-stack-section";
@@ -345,9 +346,9 @@ describe("home automations composer layout", () => {
     expect(runningRow.querySelector(".animate-pulse")).toBeNull();
     expect(runningRow.querySelector(".animate-spin")).toBeNull();
     const sparklineTimers = setInterval.mock.calls.filter(
-      ([, delay]) => delay === 1_000,
+      ([, delay]) => delay === 5_000,
     );
-    expect(sparklineTimers).toHaveLength(0);
+    expect(sparklineTimers).toHaveLength(1);
   });
 
   it("previews 10 rows, expands with View more, then offers View All at 20", async () => {
@@ -615,5 +616,33 @@ describe("home automations on a cloud backend", () => {
     expect(
       screen.queryByTestId("edit-automation-name"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("automation run activity sparkline elapsed duration", () => {
+  it("refreshes a running bar while its run data remains unchanged", async () => {
+    const run = makeRun({
+      status: AutomationRunStatus.RUNNING,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+    });
+    const runs = [run];
+    const { container } = renderHomeAutomations(
+      <AutomationRunActivitySparkline
+        automationId="auto-1"
+        runs={runs}
+        testId="active-sparkline"
+      />,
+    );
+    const bar = container.querySelector(
+      '[data-testid="active-sparkline"] span[style*="height"]',
+    ) as HTMLElement;
+    const initialHeight = bar.style.height;
+
+    await new Promise((resolve) => setTimeout(resolve, 5_100));
+
+    expect(Number.parseInt(bar.style.height, 10)).toBeGreaterThan(
+      Number.parseInt(initialHeight, 10),
+    );
   });
 });
