@@ -94,6 +94,7 @@ export interface CanvasExtensionHost {
     contributionId: string,
     mount: CanvasExtensionPageMount,
   ) => CanvasExtensionDispose;
+  isConversationArchived?: (conversationId: string) => boolean;
   navigate: (path: string) => void;
   agentServer: {
     request: <T = unknown>(

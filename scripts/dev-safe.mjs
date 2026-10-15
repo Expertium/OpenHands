@@ -43,13 +43,11 @@ const DEFAULT_BACKEND_PORT = SHARED_DEFAULTS.ports.agentServer;
 // --server-base-path and advertises the prefix) and the ingress route table,
 // or the advertised URL and the route that serves it disagree.
 export const VSCODE_BASE_PATH = SHARED_DEFAULTS.paths.vscodeBasePath;
-const DEFAULT_VITE_PORT = 3001;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_AGENT_SERVER_PACKAGE = SHARED_DEFAULTS.packages.agentServer;
 const AGENT_SERVER_GIT_REPO = "https://github.com/Expertium/software-agent-sdk";
-// Fork commit that registers TerminalRecoverObservation on terminal package import.
 export const DEFAULT_AGENT_SERVER_GIT_REF =
-  "71834fd00c62d292c1d441a4cfe00485bafb99b7";
+  "88b5a3c1f676976c82e9570c9ce81e29a597af06";
 const LOCAL_AGENT_SERVER_SUBDIRS = [
   "openhands-agent-server",
   "openhands-sdk",
@@ -439,8 +437,9 @@ function buildGitUvxArgs(gitRef) {
  * - OH_AGENT_SERVER_GIT_REF: Git commit SHA or branch name
  * - OH_AGENT_SERVER_VERSION: Specific PyPI version (e.g., "1.54.0")
  *
- * If none are set, defaults to the SDK fork commit pinned by
- * DEFAULT_AGENT_SERVER_GIT_REF.
+ * If none are set, uses the Expertium SDK fork at
+ * DEFAULT_AGENT_SERVER_GIT_REF. The immutable commit keeps packaged desktop
+ * builds aligned with the SDK fixes validated in this fork.
  *
  * @param {Record<string, string | undefined>} env
  * @returns {{ command: string, args: string[], source: string }}
@@ -504,9 +503,23 @@ export function buildAgentServerCommand(env = process.env) {
     uvxArgs.push("agent-server");
     source = `PyPI (${version})`;
   } else {
-    // Default to the pinned SDK fork commit
-    uvxArgs.push(...buildGitUvxArgs(DEFAULT_AGENT_SERVER_GIT_REF));
-    source = `git (${DEFAULT_AGENT_SERVER_GIT_REF}, default)`;
+    // Keep all SDK workspace packages on one immutable tested fork revision.
+    const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${DEFAULT_AGENT_SERVER_GIT_REF}`;
+    uvxArgs.push(
+      "--reinstall",
+      "--from",
+      `${baseGitUrl}#subdirectory=openhands-agent-server`,
+      "--with",
+      `${baseGitUrl}#subdirectory=openhands-sdk`,
+      "--with",
+      `${baseGitUrl}#subdirectory=openhands-tools`,
+      "--with",
+      `${baseGitUrl}#subdirectory=openhands-workspace`,
+      "--with",
+      AGENT_SERVER_POSTHOG_CONSTRAINT,
+      "agent-server",
+    );
+    source = `Expertium SDK fork (${DEFAULT_AGENT_SERVER_GIT_REF})`;
   }
 
   // Everything after the executable name is an agent-server CLI argument.

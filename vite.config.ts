@@ -35,6 +35,7 @@ const NODE_ENV_PILOT_TESTS = [
   "__tests__/utils/file-language.test.ts",
   "__tests__/utils/format-model-name.test.ts",
   "__tests__/utils/parse-terminal-output.test.ts",
+  "__tests__/utils/agent-server-command.test.ts",
 ];
 
 const normalizeBasePath = (value?: string) => {

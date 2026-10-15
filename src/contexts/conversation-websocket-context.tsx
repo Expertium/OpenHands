@@ -117,6 +117,19 @@ const ConversationWebSocketContext = createContext<
   ConversationWebSocketContextType | undefined
 >(undefined);
 
+function getWebSocketErrorDetail(event: Event): string {
+  if (event instanceof CloseEvent) {
+    return event.reason
+      ? `WebSocket closed (${event.code}): ${event.reason}`
+      : `WebSocket closed (${event.code}).`;
+  }
+
+  return "WebSocket error; the browser did not provide a close code.";
+}
+
+const shouldReconnectConversationSocket = (event: CloseEvent) =>
+  event.code !== 1013 || event.reason !== "frame_too_large";
+
 /**
  * Extract the text body of an echoed user `MessageEvent` for matching against
  * the optimistic pending-message queue. The server wraps the original
@@ -232,13 +245,17 @@ export function ConversationWebSocketProvider({
   const { appendInput, appendOutput } = useCommandStore();
   const resetBrowserStore = useBrowserStore((state) => state.reset);
 
+  // Resume cursors, one per socket. Started at connect time (see the lazy
+  // `queryParams` below) and advanced per durable frame without re-rendering.
+  const mainCursorRef = useRef<SeqCursor>(createSeqCursor());
+  const planningCursorRef = useRef<SeqCursor>(createSeqCursor());
+
   // Coalesce streaming deltas to ≤1 store commit/render per frame.
   // Separate batchers keep the main and planning streams from ever merging.
   const mainDeltaBatcherRef = useRef<StreamingDeltaBatcher | null>(null);
   if (mainDeltaBatcherRef.current === null) {
     mainDeltaBatcherRef.current = createStreamingDeltaBatcher((frames) => {
       useEventStore.getState().appendStreamingDeltas(frames);
-      // A delta means connectivity recovered — mirror handleNonErrorEvent.
       useErrorMessageStore.getState().clearConnectionError();
     });
   }
@@ -251,11 +268,6 @@ export function ConversationWebSocketProvider({
       useErrorMessageStore.getState().clearConnectionError();
     });
   }
-
-  // Resume cursors, one per socket. Started at connect time (see the lazy
-  // `queryParams` below) and advanced per durable frame without re-rendering.
-  const mainCursorRef = useRef<SeqCursor>(createSeqCursor());
-  const planningCursorRef = useRef<SeqCursor>(createSeqCursor());
 
   // History loading state.
   // - Main conversation history is now loaded via REST (`useConversationHistory`),
@@ -286,8 +298,6 @@ export function ConversationWebSocketProvider({
   } | null>(null);
 
   const handleNonErrorEvent = useCallback(() => {
-    // A normal event means connectivity recovered: clear a transient connection
-    // error, but keep sticky conversation errors (e.g. a wrong API key).
     clearConnectionError();
   }, [clearConnectionError]);
 
@@ -1125,11 +1135,14 @@ export function ConversationWebSocketProvider({
     return {
       queryParams,
       sessionApiKey,
-      reconnect: { enabled: true },
+      reconnect: {
+        enabled: true,
+        shouldReconnect: shouldReconnectConversationSocket,
+      },
       onOpen: () => {
         setMainConnectionState("OPEN");
         hasConnectedRefMain.current = true; // Mark that we've successfully connected
-        clearConnectionError(); // Clear a previous connection error; keep sticky conversation errors
+        clearConnectionError();
         // Progress frames are never replayed, so any slot left open across the
         // gap can never be retired. Discard and wait: the durable message is
         // coming on the cursor regardless.
@@ -1141,25 +1154,23 @@ export function ConversationWebSocketProvider({
         mainDeltaBatcherRef.current?.reset();
         useEventStore.getState().clearStreamingSlots();
       },
-      onError: () => {
+      onError: (event) => {
         setMainConnectionState("CLOSED");
-        // Only show an error if we've previously connected successfully, and
-        // the page is actually visible: a hidden tab is never watching this
-        // banner, and a background-caused drop (mobile freezing the tab) is
-        // about to be cleaned up and silently retried by
-        // `usePageVisibilityReconnect` the moment the tab is foregrounded —
-        // surfacing "Unable to connect" for it would just be a stale flash
-        // the user sees on return instead of "Reconnecting".
         if (
           hasConnectedRefMain.current &&
+          // A backgrounded tab can be dropped before the debounced cleanup.
           document.visibilityState !== "hidden"
         ) {
-          setErrorMessage(SERVER_CONNECTION_ERROR_MESSAGE, "connection");
+          const detail = getWebSocketErrorDetail(event);
+          setErrorMessage(
+            `${SERVER_CONNECTION_ERROR_MESSAGE}. ${detail}`,
+            "connection",
+          );
         }
       },
       onMessage: handleMainMessage,
     };
-  }, [handleMainMessage, setErrorMessage, clearConnectionError, sessionApiKey]);
+  }, [handleMainMessage, setErrorMessage, sessionApiKey]);
 
   // Separate WebSocket options for planning agent connection
   const planningWebsocketOptions: WebSocketHookOptions = useMemo(() => {
@@ -1178,11 +1189,14 @@ export function ConversationWebSocketProvider({
     return {
       queryParams,
       sessionApiKey: planningApiKey,
-      reconnect: { enabled: true },
+      reconnect: {
+        enabled: true,
+        shouldReconnect: shouldReconnectConversationSocket,
+      },
       onOpen: async () => {
         setPlanningConnectionState("OPEN");
         hasConnectedRefPlanning.current = true; // Mark that we've successfully connected
-        clearConnectionError(); // Clear a previous connection error; keep sticky conversation errors
+        clearConnectionError();
         // See the main socket: an open slot cannot survive the gap.
         planningDeltaBatcherRef.current?.reset();
         useEventStore.getState().clearStreamingSlots(true);
@@ -1215,26 +1229,23 @@ export function ConversationWebSocketProvider({
         planningDeltaBatcherRef.current?.reset();
         useEventStore.getState().clearStreamingSlots(true);
       },
-      onError: () => {
+      onError: (event) => {
         setPlanningConnectionState("CLOSED");
-        // See the main socket's onError: skip the banner for a hidden-tab
-        // drop, which is about to be silently retried on foreground.
         if (
           hasConnectedRefPlanning.current &&
+          // A backgrounded tab can be dropped before the debounced cleanup.
           document.visibilityState !== "hidden"
         ) {
-          setErrorMessage(SERVER_CONNECTION_ERROR_MESSAGE, "connection");
+          const detail = getWebSocketErrorDetail(event);
+          setErrorMessage(
+            `${SERVER_CONNECTION_ERROR_MESSAGE}. ${detail}`,
+            "connection",
+          );
         }
       },
       onMessage: handlePlanningMessage,
     };
-  }, [
-    handlePlanningMessage,
-    setErrorMessage,
-    clearConnectionError,
-    sessionApiKey,
-    subConversations,
-  ]);
+  }, [handlePlanningMessage, setErrorMessage, sessionApiKey, subConversations]);
 
   // Only attempt WebSocket connection when we have a valid URL
   // This prevents connection attempts during task polling phase
@@ -1278,12 +1289,6 @@ export function ConversationWebSocketProvider({
   }, [disconnectMain, disconnectPlanning]);
 
   const reconnectStaleOnForeground = useCallback(() => {
-    // Drop any "Unable to connect" banner left over from a background-caused
-    // close the instant the tab is foregrounded, so the UI reads
-    // "Reconnecting" (via `hasConnectedOnce`) rather than a stale error while
-    // the reconnect below is in flight. `clearConnectionError` only clears
-    // the connection-classified message, leaving any unrelated sticky error
-    // (e.g. a misconfigured API key) untouched.
     clearConnectionError();
     if (websocketUrl && mainConnectionState !== "OPEN") {
       reconnectMain();

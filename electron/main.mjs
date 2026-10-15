@@ -54,8 +54,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
-import { isExternalBrowsableUrl, isLoopbackAppUrl } from "./lib/window-url-policy.mjs";
+import {
+  isExternalBrowsableUrl,
+  isLoopbackAppUrl,
+} from "./lib/window-url-policy.mjs";
 import { resolveBundledRuntimeDir } from "./lib/bundled-runtime-dir.mjs";
+import {
+  applyRecoveryRuntimeEnvironment,
+  configureRecoveryRuntime,
+  getRecoveryAppUrl,
+} from "./lib/recovery-runtime-config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,14 +93,18 @@ const appIconPath = join(
   process.platform === "win32" ? "icon.ico" : "icon.png",
 );
 
-// electron-builder's NSIS shortcuts are stamped with AppUserModelId
-// ${APP_ID} (WinShell::SetLnkAUMI in installer.nsh). Declare the same id so
-// running/pinned taskbar entries group with the shortcut and inherit its
-// icon. Must match appId in electron-builder.config.mjs, and must be set
-// before any BrowserWindow is created.
+const recoveryRuntime = configureRecoveryRuntime({
+  appDataPath: app.getPath("appData"),
+});
+applyRecoveryRuntimeEnvironment(process.env, recoveryRuntime);
+
+// Match electron-builder's stable-channel AppUserModelId for Windows taskbar grouping.
 if (process.platform === "win32") {
-  app.setAppUserModelId("dev.openhands.agent-canvas");
+  app.setAppUserModelId("dev.expertium.openhands-agent-canvas.stable");
 }
+
+app.setPath("userData", recoveryRuntime.userDataPath);
+app.setName("OpenHands Expertium Stable");
 
 // ── Bundled uv ────────────────────────────────────────────────────────────────
 
@@ -413,7 +425,7 @@ function createMainWindow() {
   mainWin.on("enter-full-screen", sendFullScreenState);
   mainWin.on("leave-full-screen", sendFullScreenState);
 
-  mainWin.loadURL("http://localhost:8000");
+  mainWin.loadURL(getRecoveryAppUrl());
 
   mainWin.once("ready-to-show", () => {
     loadingWin?.destroy();
@@ -679,7 +691,7 @@ async function startStack() {
   //   onServiceLog: stream uvx/agent-server output to the loading window so
   //     the user sees progress instead of an indefinite spinner.
   const result = await main({
-    bannerTitle: "OpenHands Agent Canvas",
+    bannerTitle: "OpenHands Expertium Stable",
     staticMode: true,
     staticDir: buildDir,
     mode: "agent-canvas",
@@ -751,22 +763,18 @@ app.whenReady().then(async () => {
 
     // Stage 1: ingress proxy is bound (anything < 500 on /).
     setBootPhase("Waiting for proxy…");
-    await waitForUrl("http://localhost:8000");
+    await waitForUrl("http://localhost:28002");
 
-    // Stage 2: the agent-server behind the proxy is actually serving
-    // requests. `startStack()` already waited for this internally, but we
-    // re-probe end-to-end here so that if the user closes the splash race
-    // window between processes binding, we still open the main window with
-    // a live backend. Cheap (a single 200 response) when everything is up.
+    // Re-probe the isolated ingress before opening the recovery window.
     setBootPhase("Connecting to agent server…");
-    await waitForAgentServer("http://localhost:8000/server_info", 60_000);
+    await waitForAgentServer("http://localhost:28002/server_info", 60_000);
 
     setBootPhase("Ready.");
     createMainWindow();
   } catch (err) {
     const summary =
       err.message +
-      " Ensure ports 8000, 18000, and 18001 are free, then try again.";
+      " Ensure ports 28000, 28001, 28002, and 23001 are free, then try again.";
     // Record the failure in the terminal and the startup-log buffer so it
     // shows (and copies) as the final console line.
     console.error("[desktop] Startup failed:", err);
@@ -780,7 +788,7 @@ app.whenReady().then(async () => {
       ? `\n\nRecent service errors:\n${recentServiceErrors.join("\n")}`
       : "";
     dialog.showErrorBox(
-      "OpenHands Agent Canvas failed to start",
+      "OpenHands Expertium Stable failed to start",
       summary + errorTail,
     );
     app.quit();

@@ -320,8 +320,8 @@ function getDirSizeBytes(dir) {
 
 /** @type {import('electron-builder').Configuration} */
 const config = {
-  appId: "dev.openhands.agent-canvas",
-  productName: "OpenHands Agent Canvas",
+  appId: "dev.expertium.openhands-agent-canvas.stable",
+  productName: "OpenHands Expertium Stable",
   copyright: "Copyright © 2025 OpenHands contributors",
 
   // Stamp the packaged app with the released version (see rootPackageJson
@@ -432,9 +432,7 @@ const config = {
     target: [
       {
         target: "dmg",
-        arch: [
-          ELECTRON_ARCH ?? (process.arch === "arm64" ? "arm64" : "x64"),
-        ],
+        arch: [ELECTRON_ARCH ?? (process.arch === "arm64" ? "arm64" : "x64")],
       },
     ],
     // Universal merge whitelist: the per-arch uv/node runtime binaries are
@@ -450,16 +448,13 @@ const config = {
   },
 
   dmg: {
-    title: "OpenHands Agent Canvas",
+    title: "OpenHands Expertium Stable",
     contents: [
       { x: 130, y: 220 },
       { x: 410, y: 220, type: "link", path: "/Applications" },
     ],
     window: { width: 540, height: 380 },
-    // Default is "OpenHands Agent Canvas-<version>-<arch>.dmg"; GitHub release
-    // assets mangle spaces, so keep the asset name literal (matches the nsis
-    // convention). ${version}/${arch}/${ext} are electron-builder macros.
-    artifactName: "OpenHands-Agent-Canvas-${version}-${arch}.${ext}",
+    artifactName: "OpenHands-Expertium-Stable-${version}-${arch}.${ext}",
   },
 
   // ── Windows ────────────────────────────────────────────────────────────────
@@ -476,10 +471,8 @@ const config = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    // The default artifact name is "OpenHands Agent Canvas Setup <version>.exe";
-    // GitHub release assets mangle spaces, so ship a space-free name.
-    // ${version}/${ext} are electron-builder macros, not JS interpolation.
-    artifactName: "OpenHands-Agent-Canvas-Setup-${version}.${ext}",
+    shortcutName: "OpenHands Expertium Stable",
+    artifactName: "OpenHands-Expertium-Stable-Setup-${version}.${ext}",
   },
 
   // ── Linux ──────────────────────────────────────────────────────────────────

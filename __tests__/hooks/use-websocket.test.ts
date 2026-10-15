@@ -420,6 +420,49 @@ describe("useWebSocket reconnection", () => {
     expect(BrowserWebSocketDouble.instances).toHaveLength(1);
   });
 
+  it("does not retry when the server reports an oversized frame", () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const { result } = renderWebSocket("ws://acme.test/events", {
+      reconnect: {
+        enabled: true,
+        shouldReconnect: (event) =>
+          event.code !== 1013 || event.reason !== "frame_too_large",
+      },
+      onError,
+    });
+
+    act(() => getSocket().emitClose(1013, "frame_too_large"));
+
+    expect(result.current.error?.message).toBe(
+      "WebSocket closed with code 1013: frame_too_large",
+    );
+    expect(result.current.isReconnecting).toBe(false);
+    expect(result.current.attemptCount).toBe(0);
+    expect(onError).toHaveBeenCalledOnce();
+
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(BrowserWebSocketDouble.instances).toHaveLength(1);
+  });
+
+  it("retries other 1013 closes when the reconnect policy allows them", () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    renderWebSocket("ws://acme.test/events", {
+      reconnect: {
+        enabled: true,
+        shouldReconnect: (event) =>
+          event.code !== 1013 || event.reason !== "frame_too_large",
+      },
+    });
+
+    act(() => getSocket().emitClose(1013, "temporary_overload"));
+    expect(getSocket().readyState).toBe(BrowserWebSocketDouble.CLOSED);
+
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(BrowserWebSocketDouble.instances).toHaveLength(2);
+  });
+
   it("cancels a pending automatic retry when disconnected", () => {
     vi.useFakeTimers();
     const { result } = renderWebSocket("ws://acme.test/events", {

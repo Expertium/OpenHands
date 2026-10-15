@@ -509,7 +509,7 @@ describe("buildAgentServerTelemetryEnv", () => {
 describe("buildAgentServerCommand", () => {
   it("uses the pinned Expertium SDK fork commit by default", () => {
     const cmd = buildAgentServerCommand({});
-    const ref = "71834fd00c62d292c1d441a4cfe00485bafb99b7";
+    const ref = "88b5a3c1f676976c82e9570c9ce81e29a597af06";
     const base = `git+https://github.com/Expertium/software-agent-sdk@${ref}`;
 
     expect(cmd.command).toBe("uvx");
@@ -529,7 +529,7 @@ describe("buildAgentServerCommand", () => {
       "--import-modules",
       "canvas_ui_tool",
     ]);
-    expect(cmd.source).toBe(`git (${ref}, default)`);
+    expect(cmd.source).toBe(`Expertium SDK fork (${ref})`);
   });
 
   it("uses specific PyPI version when OH_AGENT_SERVER_VERSION is set with all packages pinned", () => {
