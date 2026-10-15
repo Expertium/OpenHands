@@ -6,6 +6,10 @@ export const RECOVERY_AUTOMATION_PORT = 28001;
 export const RECOVERY_INGRESS_PORT = 28002;
 export const RECOVERY_FRONTEND_PORT = 23001;
 
+export function getRecoveryAppUrl() {
+  return `http://localhost:${RECOVERY_INGRESS_PORT}`;
+}
+
 export function configureRecoveryRuntime({ appDataPath, env = process.env }) {
   const stateRoot = join(appDataPath, RECOVERY_STATE_DIR_NAME);
   const appState = join(stateRoot, "agent-canvas");

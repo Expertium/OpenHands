@@ -59,7 +59,10 @@ import {
   isLoopbackAppUrl,
 } from "./lib/window-url-policy.mjs";
 import { resolveBundledRuntimeDir } from "./lib/bundled-runtime-dir.mjs";
-import { configureRecoveryRuntime } from "./lib/recovery-runtime-config.mjs";
+import {
+  configureRecoveryRuntime,
+  getRecoveryAppUrl,
+} from "./lib/recovery-runtime-config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -421,7 +424,7 @@ function createMainWindow() {
   mainWin.on("enter-full-screen", sendFullScreenState);
   mainWin.on("leave-full-screen", sendFullScreenState);
 
-  mainWin.loadURL("http://localhost:8000");
+  mainWin.loadURL(getRecoveryAppUrl());
 
   mainWin.once("ready-to-show", () => {
     loadingWin?.destroy();

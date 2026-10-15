@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   configureRecoveryRuntime,
+  getRecoveryAppUrl,
   RECOVERY_AUTOMATION_PORT,
   RECOVERY_BACKEND_PORT,
   RECOVERY_FRONTEND_PORT,
@@ -31,11 +32,17 @@ describe("recovery runtime config", () => {
     );
     expect(env.OH_CANVAS_SAFE_VITE_PORT).toBe(String(RECOVERY_FRONTEND_PORT));
     expect(env.PORT).toBe(String(RECOVERY_INGRESS_PORT));
+    expect(env.PORT).not.toBe("8000");
     expect(env.OH_AGENT_SERVER_GIT_REF).toBe(
       "71834fd00c62d292c1d441a4cfe00485bafb99b7",
     );
     expect(env.OH_CONVERSATIONS_PATH).not.toContain("OpenHands Agent Canvas");
     expect(env.OH_PERSISTENCE_DIR).not.toContain(".openhands");
+  });
+
+  it("opens the recovery app on its own ingress instead of primary port 8000", () => {
+    expect(getRecoveryAppUrl()).toBe("http://localhost:28002");
+    expect(getRecoveryAppUrl()).not.toBe("http://localhost:8000");
   });
 
   it("does not inherit a primary secret, API key or alternate SDK source", () => {
