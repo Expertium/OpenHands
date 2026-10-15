@@ -22,7 +22,7 @@ import config from "../../electron-builder.config.mjs";
 
 const afterPack = config.afterPack as (ctx: unknown) => Promise<void>;
 
-const PRODUCT_FILENAME = "OpenHands Expertium Recovery";
+const PRODUCT_FILENAME = "OpenHands Expertium Stable";
 
 function makeContext(platform: string, appOutDir: string) {
   return {
@@ -247,11 +247,11 @@ describe("desktop app name", () => {
     expect(config.productName).toBe(PRODUCT_FILENAME);
   });
 
-  it("uses a distinct Windows install identity and shortcut", () => {
-    expect(config.appId).toBe("dev.expertium.openhands-agent-canvas.recovery");
-    expect(config.nsis?.shortcutName).toBe("OpenHands Expertium Recovery");
+  it("uses a distinct Stable Windows install identity and shortcut", () => {
+    expect(config.appId).toBe("dev.expertium.openhands-agent-canvas.stable");
+    expect(config.nsis?.shortcutName).toBe("OpenHands Expertium Stable");
     expect(config.nsis?.artifactName).toBe(
-      "OpenHands-Expertium-Recovery-Setup-${version}.${ext}",
+      "OpenHands-Expertium-Stable-Setup-${version}.${ext}",
     );
   });
 });
