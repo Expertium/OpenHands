@@ -5,6 +5,13 @@ export const RECOVERY_BACKEND_PORT = 28000;
 export const RECOVERY_AUTOMATION_PORT = 28001;
 export const RECOVERY_INGRESS_PORT = 28002;
 export const RECOVERY_FRONTEND_PORT = 23001;
+export const RECOVERY_REMOVED_ENV_KEYS = [
+  "OPENHANDS_AUTOMATION_API_KEY",
+  "LOCAL_BACKEND_API_KEY",
+  "OH_SECRET_KEY",
+  "OH_AGENT_SERVER_LOCAL_PATH",
+  "OH_AGENT_SERVER_VERSION",
+];
 
 export function getRecoveryAppUrl() {
   return `http://localhost:${RECOVERY_INGRESS_PORT}`;
@@ -15,11 +22,7 @@ export function configureRecoveryRuntime({ appDataPath, env = process.env }) {
   const appState = join(stateRoot, "agent-canvas");
   const persistence = stateRoot;
   const recoveryEnv = { ...env };
-  delete recoveryEnv.OPENHANDS_AUTOMATION_API_KEY;
-  delete recoveryEnv.LOCAL_BACKEND_API_KEY;
-  delete recoveryEnv.OH_SECRET_KEY;
-  delete recoveryEnv.OH_AGENT_SERVER_LOCAL_PATH;
-  delete recoveryEnv.OH_AGENT_SERVER_VERSION;
+  for (const key of RECOVERY_REMOVED_ENV_KEYS) delete recoveryEnv[key];
 
   return {
     stateRoot,
@@ -45,4 +48,9 @@ export function configureRecoveryRuntime({ appDataPath, env = process.env }) {
       PORT: String(RECOVERY_INGRESS_PORT),
     },
   };
+}
+
+export function applyRecoveryRuntimeEnvironment(targetEnv, recoveryRuntime) {
+  for (const key of RECOVERY_REMOVED_ENV_KEYS) delete targetEnv[key];
+  Object.assign(targetEnv, recoveryRuntime.env);
 }
