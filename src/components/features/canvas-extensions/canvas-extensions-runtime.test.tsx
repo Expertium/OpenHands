@@ -116,10 +116,9 @@ describe("CanvasExtensionsRuntimeProvider", () => {
   });
 
   it("exposes archived conversation state only for the active backend", async () => {
-    useArchivedConversationsStore.getState().archiveConversation(
-      backend.id,
-      "archived-conversation",
-    );
+    useArchivedConversationsStore
+      .getState()
+      .archiveConversation(backend.id, "archived-conversation");
     let isArchived = false;
     const moduleLoader = vi.fn().mockImplementation(async () => ({
       activate: (host: CanvasExtensionHost) => {
