@@ -371,3 +371,57 @@ x
     errors = validate_pr_body(body)
     assert "Keep the `AGENT:` marker from the PR template." not in errors
     assert "Add a short human-written note between `HUMAN:` and `AGENT:`." not in errors
+
+def test_expertium_repo_does_not_require_human_section():
+    body = """## Why
+Allow a maintainer-triggered release workflow rerun.
+
+## Summary
+Add a manual workflow trigger.
+
+## How to Test
+Parse the workflow YAML and inspect its trigger list.
+
+AGENT:
+
+## Notes
+No release or tag is created directly.
+"""
+    assert validate_pr_body(body, repository="Expertium/OpenHands") == []
+    assert validate_pr_body(body, repository="Expertium/software-agent-sdk") == []
+
+
+def test_other_repositories_still_require_human_section():
+    body = """## Why
+Allow the workflow to be rerun.
+
+## Summary
+Add a manual workflow trigger.
+
+## How to Test
+Parse the workflow YAML.
+
+AGENT:
+"""
+    errors = validate_pr_body(body, repository="Example/OtherRepo")
+    assert "The first visible line of the PR description must be `HUMAN:`." in errors
+    assert "Add a short human-written note between `HUMAN:` and `AGENT:`." in errors
+
+
+def test_repo_without_issues_does_not_require_issue_reference():
+    body = "## Summary\nManual workflow dispatch.\n"
+    assert validate_linked_issue_ready(body, issues_enabled=False) == []
+
+
+def test_repo_with_issues_still_requires_issue_reference():
+    errors = validate_linked_issue_ready("## Summary\nChange.\n", issues_enabled=True)
+    assert len(errors) == 1
+    assert "Link an issue" in errors[0]
+
+def test_expertium_pr_template_does_not_require_issue_reference():
+    body = "## Summary\nManual release workflow trigger.\n"
+    assert validate_linked_issue_ready(
+        body,
+        repo="Expertium/OpenHands",
+        token="unused",
+    ) == []
