@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { NavigationLink } from "#/components/shared/navigation-link";
 import { AUTOMATION_RUN_ACTIVITY_LIMIT } from "#/hooks/query/use-latest-automation-runs";
 import { I18nKey } from "#/i18n/declaration";
-import type { AutomationRun } from "#/types/automation";
+import { AutomationRunStatus, type AutomationRun } from "#/types/automation";
 import { getAutomationRunDisplay } from "#/utils/automation-run-display";
 import { formatRelativeTime } from "#/utils/format-relative-time";
 import { cn } from "#/utils/utils";
@@ -155,10 +155,19 @@ export function AutomationRunActivitySparkline({
 }: AutomationRunActivitySparklineProps) {
   const { t } = useTranslation("openhands");
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const hasActiveRuns = runs.some(
+    (run) =>
+      run.status === AutomationRunStatus.PENDING ||
+      run.status === AutomationRunStatus.RUNNING,
+  );
 
   useEffect(() => {
     setNowMs(Date.now());
-  }, [runs]);
+    if (!hasActiveRuns) return undefined;
+
+    const intervalId = window.setInterval(() => setNowMs(Date.now()), 5_000);
+    return () => window.clearInterval(intervalId);
+  }, [hasActiveRuns, runs]);
 
   if (runs.length === 0) return null;
 
