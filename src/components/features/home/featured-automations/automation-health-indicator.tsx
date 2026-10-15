@@ -36,8 +36,7 @@ export function AutomationHealthIndicator({
         "h-1.5 w-1.5 shrink-0 rounded-full",
         health === "failed" && "bg-status-error",
         health === "warning" && "bg-warning",
-        health === "in_progress" &&
-          "animate-pulse bg-status-success motion-reduce:animate-none",
+        health === "in_progress" && "bg-status-success",
         (health === "none" || health === "unknown") && "bg-border",
       )}
     />

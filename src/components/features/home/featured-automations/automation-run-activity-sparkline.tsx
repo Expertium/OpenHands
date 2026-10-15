@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationLink } from "#/components/shared/navigation-link";
 import { AUTOMATION_RUN_ACTIVITY_LIMIT } from "#/hooks/query/use-latest-automation-runs";
-import { isInFlightAutomationRun } from "#/hooks/use-home-automation-actions";
 import { I18nKey } from "#/i18n/declaration";
 import type { AutomationRun } from "#/types/automation";
 import { getAutomationRunDisplay } from "#/utils/automation-run-display";
@@ -155,16 +154,11 @@ export function AutomationRunActivitySparkline({
   testId,
 }: AutomationRunActivitySparklineProps) {
   const { t } = useTranslation("openhands");
-  const hasInFlight = runs.some((run) => isInFlightAutomationRun(run));
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!hasInFlight) return undefined;
-    // Tick while a run is in flight so bar height tracks elapsed time between
-    // the slower runs-list polls.
-    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [hasInFlight]);
+    setNowMs(Date.now());
+  }, [runs]);
 
   if (runs.length === 0) return null;
 

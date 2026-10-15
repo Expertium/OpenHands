@@ -310,7 +310,7 @@ describe("home automations composer layout", () => {
             runs: [
               makeRun({
                 id: "run-2",
-                status: AutomationRunStatus.PENDING,
+                status: AutomationRunStatus.RUNNING,
                 conversation_id: null,
                 started_at: "1970-01-01T00:00:00Z",
                 completed_at: null,
@@ -322,6 +322,7 @@ describe("home automations composer layout", () => {
         return { runs: [makeRun()], total: 1 };
       },
     );
+    const setInterval = vi.spyOn(window, "setInterval");
 
     renderHomeAutomations(<RunningAutomationsList />);
 
@@ -340,6 +341,13 @@ describe("home automations composer layout", () => {
     expect(
       screen.getByText("Daily at 09:00", { exact: false }),
     ).toBeInTheDocument();
+    const runningRow = screen.getByTestId("running-automation-row-auto-2");
+    expect(runningRow.querySelector(".animate-pulse")).toBeNull();
+    expect(runningRow.querySelector(".animate-spin")).toBeNull();
+    const sparklineTimers = setInterval.mock.calls.filter(
+      ([, delay]) => delay === 1_000,
+    );
+    expect(sparklineTimers).toHaveLength(0);
   });
 
   it("previews 10 rows, expands with View more, then offers View All at 20", async () => {
@@ -601,7 +609,9 @@ describe("home automations on a cloud backend", () => {
 
     // Assert — Edit opens the setup form for this row rather than the modal.
     expect(homeMocks.createConversationMutate).not.toHaveBeenCalled();
-    expect(homeMocks.navigate).toHaveBeenCalledWith("/automations/setup?automationId=auto-1");
+    expect(homeMocks.navigate).toHaveBeenCalledWith(
+      "/automations/setup?automationId=auto-1",
+    );
     expect(
       screen.queryByTestId("edit-automation-name"),
     ).not.toBeInTheDocument();

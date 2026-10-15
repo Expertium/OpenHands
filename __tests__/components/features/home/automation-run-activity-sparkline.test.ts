@@ -90,10 +90,10 @@ describe("formatDurationForTitle", () => {
 });
 
 describe("barColorClassForStatus", () => {
-  it("uses a pulsing success green for running bars", () => {
+  it("uses a static success green for running bars", () => {
     const classes = barColorClassForStatus(AutomationRunStatus.RUNNING);
     expect(classes).toContain("bg-status-success");
-    expect(classes).toContain("animate-pulse");
+    expect(classes).not.toContain("animate-pulse");
   });
 
   it("uses a grey diagonal hatch for pending bars", () => {

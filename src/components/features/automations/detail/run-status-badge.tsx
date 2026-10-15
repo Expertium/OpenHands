@@ -100,7 +100,7 @@ function StatusIcon({
       return (
         <Loader2
           data-testid="run-status-icon-running"
-          className={cn(iconClass, "animate-spin motion-reduce:animate-none")}
+          className={iconClass}
           aria-hidden="true"
         />
       );
