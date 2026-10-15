@@ -679,11 +679,10 @@ describe("Conversation websocket behavior", () => {
     expect(socketCapture.planningUrl).toBe("");
   });
 
-  it("reports the main socket lifecycle and only surfaces errors after a successful connection", () => {
-    vi.useFakeTimers();
+  it("reports the main socket lifecycle and shows close details after a successful connection", () => {
     renderProvider();
 
-    act(() => mainOptions().onError?.(new Event("error")));
+    act(() => mainOptions().onError?.(new CloseEvent("close", { code: 1006 })));
     expect(useErrorMessageStore.getState().errorMessage).toBeNull();
     expect(screen.getByTestId("connection-state")).toHaveTextContent("CLOSED");
 
@@ -697,49 +696,31 @@ describe("Conversation websocket behavior", () => {
     act(() => mainOptions().onClose?.(new CloseEvent("close")));
     expect(screen.getByTestId("connection-state")).toHaveTextContent("CLOSED");
 
-    act(() => mainOptions().onError?.(new Event("error")));
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
-
-    act(() => vi.advanceTimersByTime(3_000));
+    act(() =>
+      mainOptions().onError?.(
+        new CloseEvent("close", { code: 1013, reason: "frame_too_large" }),
+      ),
+    );
     expect(useErrorMessageStore.getState()).toMatchObject({
-      errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
+      errorMessage: `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket closed (1013): frame_too_large`,
       errorType: "connection",
     });
   });
 
-  it("suppresses a transient main socket error that recovers before the grace period", () => {
-    vi.useFakeTimers();
-    renderProvider();
-    act(() => mainOptions().onOpen?.(new Event("open")));
+  it("includes planning socket close details in its connection error", async () => {
+    vi.spyOn(EventService, "getEventCount").mockResolvedValue(0);
+    renderProvider({ subConversations: [makeSubConversation()] });
+    await act(async () => planningOptions().onOpen?.(new Event("open")));
 
-    act(() => mainOptions().onError?.(new Event("error")));
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+    act(() =>
+      planningOptions().onError?.(
+        new CloseEvent("close", { code: 1013, reason: "slow_consumer" }),
+      ),
+    );
 
-    act(() => {
-      vi.advanceTimersByTime(1_500);
-      mainOptions().onOpen?.(new Event("open"));
-      vi.advanceTimersByTime(2_000);
-    });
-
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
-  });
-
-  it("shows a connection error only after a sustained main socket outage", () => {
-    vi.useFakeTimers();
-    renderProvider();
-    act(() => mainOptions().onOpen?.(new Event("open")));
-
-    act(() => {
-      mainOptions().onError?.(new Event("error"));
-      vi.advanceTimersByTime(2_999);
-    });
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
-
-    act(() => vi.advanceTimersByTime(1));
-    expect(useErrorMessageStore.getState()).toMatchObject({
-      errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
-      errorType: "connection",
-    });
+    expect(useErrorMessageStore.getState().errorMessage).toBe(
+      `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket closed (1013): slow_consumer`,
+    );
   });
 
   it("merges main and planning connection lifecycles", async () => {
@@ -766,18 +747,17 @@ describe("Conversation websocket behavior", () => {
     act(() => mainOptions().onClose?.(new CloseEvent("close")));
     expect(screen.getByTestId("connection-state")).toHaveTextContent("CLOSED");
 
-    vi.useFakeTimers();
     act(() => {
-      mainOptions().onError?.(new Event("error"));
-      planningOptions().onError?.(new Event("error"));
+      mainOptions().onError?.(
+        new CloseEvent("close", { code: 1013, reason: "frame_too_large" }),
+      );
+      planningOptions().onError?.(
+        new CloseEvent("close", { code: 1013, reason: "slow_consumer" }),
+      );
     });
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
-
-    act(() => vi.advanceTimersByTime(3_000));
-    expect(useErrorMessageStore.getState()).toMatchObject({
-      errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
-      errorType: "connection",
-    });
+    expect(useErrorMessageStore.getState().errorMessage).toBe(
+      `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket closed (1013): slow_consumer`,
+    );
   });
 
   for (const [label, readyState, expected] of [
@@ -2486,17 +2466,19 @@ describe("Conversation websocket — page visibility reconnect (#17894)", () => 
     act(() => setVisibility("visible"));
   });
 
-  it("surfaces a visible connection error only after the outage grace period", () => {
+  it("surfaces a visible connection error with its close code and reason", () => {
     setUserAgent(MOBILE_USER_AGENT);
     renderProvider();
     act(() => mainOptions().onOpen?.(new Event("open")));
 
-    act(() => mainOptions().onError?.(new Event("error")));
-    expect(useErrorMessageStore.getState().errorMessage).toBeNull();
+    act(() =>
+      mainOptions().onError?.(
+        new CloseEvent("close", { code: 1013, reason: "frame_too_large" }),
+      ),
+    );
 
-    act(() => vi.advanceTimersByTime(3_000));
     expect(useErrorMessageStore.getState()).toMatchObject({
-      errorMessage: SERVER_CONNECTION_ERROR_MESSAGE,
+      errorMessage: `${SERVER_CONNECTION_ERROR_MESSAGE}. WebSocket closed (1013): frame_too_large`,
       errorType: "connection",
     });
   });

@@ -34,7 +34,7 @@ export function configureRecoveryRuntime({ appDataPath, env = process.env }) {
       OH_CANVAS_SAFE_BACKEND_PORT: String(RECOVERY_BACKEND_PORT),
       OH_CANVAS_SAFE_AUTOMATION_PORT: String(RECOVERY_AUTOMATION_PORT),
       OH_CANVAS_SAFE_VITE_PORT: String(RECOVERY_FRONTEND_PORT),
-      OH_AGENT_SERVER_GIT_REF: "71834fd00c62d292c1d441a4cfe00485bafb99b7",
+      OH_AGENT_SERVER_GIT_REF: "08c4f10ca601689290925f09228f8345d6bf9bc8",
       OH_SECRET_KEY_PATH: join(stateRoot, "secret-key.txt"),
       OH_SESSION_API_KEY_PATH: join(stateRoot, "api-key.txt"),
       OH_PERSISTENCE_DIR: persistence,
