@@ -57,11 +57,12 @@ describe("recovery runtime config", () => {
       },
     });
 
-    expect(config.env.OH_SECRET_KEY).toBeUndefined();
-    expect(config.env.OPENHANDS_AUTOMATION_API_KEY).toBeUndefined();
-    expect(config.env.LOCAL_BACKEND_API_KEY).toBeUndefined();
-    expect(config.env.OH_AGENT_SERVER_LOCAL_PATH).toBeUndefined();
-    expect(config.env.OH_AGENT_SERVER_VERSION).toBeUndefined();
+    const env = config.env as Record<string, string | undefined>;
+    expect(env.OH_SECRET_KEY).toBeUndefined();
+    expect(env.OPENHANDS_AUTOMATION_API_KEY).toBeUndefined();
+    expect(env.LOCAL_BACKEND_API_KEY).toBeUndefined();
+    expect(env.OH_AGENT_SERVER_LOCAL_PATH).toBeUndefined();
+    expect(env.OH_AGENT_SERVER_VERSION).toBeUndefined();
     expect(config.env.OH_SECRET_KEY_PATH).toContain(RECOVERY_STATE_DIR_NAME);
     expect(config.env.OH_SESSION_API_KEY_PATH).toContain(
       RECOVERY_STATE_DIR_NAME,
