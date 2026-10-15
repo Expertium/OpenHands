@@ -85,6 +85,7 @@ BARE_ISSUE_REF_RE = re.compile(r"(?<!\w)#(\d+)")
 READY_FOR_DEV_LABEL = "ready-for-dev"
 BUG_LABEL = "bug"
 ENHANCEMENT_LABEL = "enhancement"
+HUMAN_NOTE_EXEMPT_OWNERS = {"Expertium"}
 
 # PR Type checkboxes in the `## Type` section. We capture which type the author
 # checked so we can cross-check it against the linked issue's labels.
@@ -294,7 +295,11 @@ def fetch_issue_labels(repo: str, issue_number: int, token: str) -> list[str]:
 
 
 def validate_linked_issue_ready(
-    body: str, repo: str | None = None, token: str | None = None
+    body: str,
+    repo: str | None = None,
+    token: str | None = None,
+    *,
+    issues_enabled: bool = True,
 ) -> list[str]:
     """Require a linked issue carrying the `ready-for-dev` label.
 
@@ -307,6 +312,8 @@ def validate_linked_issue_ready(
     skipped.
     """
     errors: list[str] = []
+    if not issues_enabled:
+        return errors
 
     numbers = extract_linked_issue_numbers(body)
     if not numbers:
@@ -368,14 +375,21 @@ def validate_linked_issue_ready(
     return errors
 
 
-def validate_pr_body(body: str, files: list[str] | None = None) -> list[str]:
+def validate_pr_body(
+    body: str,
+    files: list[str] | None = None,
+    *,
+    repository: str | None = None,
+) -> list[str]:
     errors: list[str] = []
+    repository_owner = repository.partition("/")[0] if repository else None
+    human_note_required = repository_owner not in HUMAN_NOTE_EXEMPT_OWNERS
 
-    if first_visible_line(body) != "HUMAN:":
+    if human_note_required and first_visible_line(body) != "HUMAN:":
         errors.append("The first visible line of the PR description must be `HUMAN:`.")
 
     human_note = extract_human_note(body)
-    if len(human_note) < MIN_HUMAN_NOTE_CHARS:
+    if human_note_required and len(human_note) < MIN_HUMAN_NOTE_CHARS:
         errors.append("Add a short human-written note between `HUMAN:` and `AGENT:`.")
 
     if AGENT_HEADING_RE.search(without_fenced_code_blocks(body)) is None:
@@ -496,15 +510,26 @@ def main() -> int:
     else:
         files = []
 
-    errors = validate_pr_body(body, files)
-
     repo = None
+    repository = None
+    issues_enabled = True
     token = os.environ.get("GITHUB_TOKEN")
     if args.event_path is not None and args.body_file is None:
         payload = json.loads(args.event_path.read_text())
-        repo = payload.get("repository", {}).get("full_name")
+        repository_metadata = payload.get("repository", {})
+        repository = repository_metadata.get("full_name")
+        repo = repository
+        issues_enabled = repository_metadata.get("has_issues", True)
 
-    errors.extend(validate_linked_issue_ready(body, repo, token))
+    errors = validate_pr_body(body, files, repository=repository)
+    errors.extend(
+        validate_linked_issue_ready(
+            body,
+            repo,
+            token,
+            issues_enabled=issues_enabled,
+        )
+    )
 
     for error in errors:
         print(f"::error::{error}")
