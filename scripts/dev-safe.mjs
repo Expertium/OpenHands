@@ -43,8 +43,8 @@ const DEFAULT_BACKEND_PORT = SHARED_DEFAULTS.ports.agentServer;
 // --server-base-path and advertises the prefix) and the ingress route table,
 // or the advertised URL and the route that serves it disagree.
 export const VSCODE_BASE_PATH = SHARED_DEFAULTS.paths.vscodeBasePath;
-const DEFAULT_VITE_PORT = 3001;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
+const DEFAULT_AGENT_SERVER_PACKAGE = SHARED_DEFAULTS.packages.agentServer;
 const AGENT_SERVER_GIT_REPO = "https://github.com/Expertium/software-agent-sdk";
 export const DEFAULT_AGENT_SERVER_GIT_REF =
   "88b5a3c1f676976c82e9570c9ce81e29a597af06";
@@ -407,6 +407,24 @@ export function validateFrontendDependencies(
  */
 export const AGENT_SERVER_IMPORT_MODULES = "canvas_ui_tool";
 
+function buildGitUvxArgs(gitRef) {
+  const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${gitRef}`;
+  return [
+    "--reinstall",
+    "--from",
+    `${baseGitUrl}#subdirectory=openhands-agent-server`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-sdk`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-tools`,
+    "--with",
+    `${baseGitUrl}#subdirectory=openhands-workspace`,
+    "--with",
+    AGENT_SERVER_POSTHOG_CONSTRAINT,
+    "agent-server",
+  ];
+}
+
 /**
  * Build the uvx command and arguments for running agent-server.
  *
@@ -465,21 +483,7 @@ export function buildAgentServerCommand(env = process.env) {
     // string as the current PyPI release (e.g. both "1.26.0"). Without it, uv
     // silently reuses the cached PyPI wheels and the git ref is never actually
     // used, even though it was explicitly requested.
-    const baseGitUrl = `git+${AGENT_SERVER_GIT_REPO}@${gitRef}`;
-    uvxArgs.push(
-      "--reinstall",
-      "--from",
-      `${baseGitUrl}#subdirectory=openhands-agent-server`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-sdk`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-tools`,
-      "--with",
-      `${baseGitUrl}#subdirectory=openhands-workspace`,
-      "--with",
-      AGENT_SERVER_POSTHOG_CONSTRAINT,
-      "agent-server",
-    );
+    uvxArgs.push(...buildGitUvxArgs(gitRef));
     source = `git (${gitRef})`;
   } else if (version) {
     // Use specific PyPI version: uvx --from openhands-agent-server==version agent-server
