@@ -52,6 +52,7 @@ describe("vitest environment projects", () => {
       "__tests__/utils/file-language.test.ts",
       "__tests__/utils/format-model-name.test.ts",
       "__tests__/utils/parse-terminal-output.test.ts",
+      "__tests__/utils/agent-server-command.test.ts",
     ]);
   });
 
@@ -104,7 +105,9 @@ describe("vite app build", () => {
       };
     };
 
-    expect(appBuild.build?.rolldownOptions?.output?.codeSplitting?.groups).toEqual(
+    expect(
+      appBuild.build?.rolldownOptions?.output?.codeSplitting?.groups,
+    ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           name: "vendor",
