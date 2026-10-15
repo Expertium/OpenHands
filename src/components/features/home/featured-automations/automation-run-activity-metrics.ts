@@ -82,7 +82,7 @@ export function barColorClassForStatus(
     case "unknown":
       return "bg-warning";
     case AutomationRunStatus.RUNNING:
-      return "bg-status-success animate-pulse motion-reduce:animate-none";
+      return "bg-status-success";
     case AutomationRunStatus.PENDING:
       // Grey hatch so pending reads as queued, distinct from solid cancelled/skipped.
       return "bg-[repeating-linear-gradient(-45deg,var(--oh-muted)_0_1.5px,var(--oh-border)_1.5px_3px)]";
