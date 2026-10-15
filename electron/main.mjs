@@ -60,6 +60,7 @@ import {
 } from "./lib/window-url-policy.mjs";
 import { resolveBundledRuntimeDir } from "./lib/bundled-runtime-dir.mjs";
 import {
+  applyRecoveryRuntimeEnvironment,
   configureRecoveryRuntime,
   getRecoveryAppUrl,
 } from "./lib/recovery-runtime-config.mjs";
@@ -95,7 +96,7 @@ const appIconPath = join(
 const recoveryRuntime = configureRecoveryRuntime({
   appDataPath: app.getPath("appData"),
 });
-Object.assign(process.env, recoveryRuntime.env);
+applyRecoveryRuntimeEnvironment(process.env, recoveryRuntime);
 
 // Match electron-builder's stable-channel AppUserModelId for Windows taskbar grouping.
 if (process.platform === "win32") {

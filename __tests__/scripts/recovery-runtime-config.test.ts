@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  applyRecoveryRuntimeEnvironment,
   configureRecoveryRuntime,
   getRecoveryAppUrl,
   RECOVERY_AUTOMATION_PORT,
@@ -67,5 +68,33 @@ describe("recovery runtime config", () => {
     expect(config.env.OH_SESSION_API_KEY_PATH).toContain(
       RECOVERY_STATE_DIR_NAME,
     );
+  });
+
+  it("removes inherited secrets and SDK overrides before configuring the child environment", () => {
+    const appData = join("C:", "Users", "test", "AppData", "Roaming");
+    const processEnv: Record<string, string | undefined> = {
+      OH_SECRET_KEY: "primary-secret",
+      OPENHANDS_AUTOMATION_API_KEY: "primary-automation-key",
+      LOCAL_BACKEND_API_KEY: "primary-api-key",
+      OH_AGENT_SERVER_LOCAL_PATH: join("C:", "primary-sdk"),
+      OH_AGENT_SERVER_VERSION: "9.9.9",
+      KEEP_ME: "unrelated",
+    };
+    const config = configureRecoveryRuntime({
+      appDataPath: appData,
+      env: processEnv as NodeJS.ProcessEnv,
+    });
+
+    applyRecoveryRuntimeEnvironment(processEnv, config);
+
+    expect(processEnv).toMatchObject({
+      OH_AGENT_SERVER_GIT_REF: "88b5a3c1f676976c82e9570c9ce81e29a597af06",
+      KEEP_ME: "unrelated",
+    });
+    expect(processEnv).not.toHaveProperty("OH_SECRET_KEY");
+    expect(processEnv).not.toHaveProperty("OPENHANDS_AUTOMATION_API_KEY");
+    expect(processEnv).not.toHaveProperty("LOCAL_BACKEND_API_KEY");
+    expect(processEnv).not.toHaveProperty("OH_AGENT_SERVER_LOCAL_PATH");
+    expect(processEnv).not.toHaveProperty("OH_AGENT_SERVER_VERSION");
   });
 });
