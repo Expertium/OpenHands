@@ -22,11 +22,16 @@ describe("ChatStatusIndicator", () => {
     expect(screen.getByText("Waiting for runtime")).toBeInTheDocument();
   });
 
-  it("renders a static dot with the supplied status color", () => {
-    render(<ChatStatusIndicator status="Thinking" statusColor="#00FF00" />);
+  it.each([
+    ["Thinking", "#00FF00"],
+    ["Loading", "#FFD600"],
+    ["Waiting for runtime", "#FFD600"],
+    ["Error", "#FF684E"],
+  ])("renders a static dot for %s with its status color", (status, color) => {
+    render(<ChatStatusIndicator status={status} statusColor={color} />);
 
     const icon = screen.getByTestId("debug-stackframe-dot");
-    expect(icon).toHaveAttribute("color", "#00FF00");
+    expect(icon).toHaveAttribute("color", color);
     expect(icon.parentElement).toHaveClass("flex-shrink-0");
     expect(icon.parentElement).not.toHaveClass(
       "animate-[pulse_1.2s_ease-in-out_infinite]",
