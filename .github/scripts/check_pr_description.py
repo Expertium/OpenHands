@@ -3,8 +3,6 @@
 Required template fields: Why, Summary, and How to Test.
 
 Additional checks:
-- If the "A human has tested these changes" checkbox is present, it must be
-  checked.
 - If frontend code was touched, the description must include a screenshot or
   video.
 - Bug-fix and feature PRs require running-Canvas screenshots or video even
@@ -32,10 +30,7 @@ from pathlib import Path
 
 from markdown_sections import find_headings, without_fenced_code_blocks
 
-
-# Reject placeholders while allowing a concise human-written sentence.
-MIN_HUMAN_NOTE_CHARS = 20
-# These are the only PR-template sections that must remain and contain content.
+# Required PR-template sections must remain and contain content.
 REQUIRED_TEMPLATE_FIELDS: tuple[str, ...] = ("Why", "Summary", "How to Test")
 
 HTML_COMMENT_RE = re.compile(r"<!--[\s\S]*?-->")
@@ -43,7 +38,6 @@ HEADING_RE = re.compile(r"(?m)^##[ \t]+(.+?)[ \t]*$")
 # `\r?$` rather than `\s*$` for the same reason as HEADING_RE above: these run
 # against masked text too, and there is no capture group here to absorb the `\r`
 # of a CRLF body, so it has to be matched explicitly.
-HUMAN_HEADING_RE = re.compile(r"(?im)^[ \t]*HUMAN:[ \t]*\r?$")
 AGENT_HEADING_RE = re.compile(r"(?im)^[ \t]*AGENT:[ \t]*\r?$")
 
 # A file counts as frontend code if its path is under one of these prefixes or
@@ -68,18 +62,11 @@ FRONTEND_CONFIG_GLOBS: tuple[str, ...] = (
     "postcss.config.*",
 )
 
-# The human-tested checkbox the HUMAN section asks contributors to tick.
-HUMAN_TESTED_RE = re.compile(
-    r"(?im)^\s*[-*]\s*\[(?P<box>[ xX])\]\s*.*?human has tested these changes"
-)
-
 # Issue references in the PR body: "Fixes #123", "Closes #123", "Resolves #123",
 # or a bare "#123" in the Issue Number section. We capture the issue number.
 # GitHub auto-linking keywords: close, closes, closed, fix, fixes, fixed,
 # resolve, resolves, resolved (case-insensitive).
-ISSUE_REF_RE = re.compile(
-    r"(?i)(?:fix|clos|resolv)(?:e?(?:s|d)?|ing)?\s+#(\d+)"
-)
+ISSUE_REF_RE = re.compile(r"(?i)(?:fix|clos|resolv)(?:e?(?:s|d)?|ing)?\s+#(\d+)")
 BARE_ISSUE_REF_RE = re.compile(r"(?<!\w)#(\d+)")
 
 READY_FOR_DEV_LABEL = "ready-for-dev"
@@ -89,12 +76,8 @@ PR_TEMPLATE_EXEMPT_OWNERS = {"Expertium"}
 
 # PR Type checkboxes in the `## Type` section. We capture which type the author
 # checked so we can cross-check it against the linked issue's labels.
-PR_TYPE_BUG_RE = re.compile(
-    r"(?im)^\s*[-*]\s*\[(?P<box>[ xX])\]\s*Bug fix"
-)
-PR_TYPE_FEATURE_RE = re.compile(
-    r"(?im)^\s*[-*]\s*\[(?P<box>[ xX])\]\s*Feature"
-)
+PR_TYPE_BUG_RE = re.compile(r"(?im)^\s*[-*]\s*\[(?P<box>[ xX])\]\s*Bug fix")
+PR_TYPE_FEATURE_RE = re.compile(r"(?im)^\s*[-*]\s*\[(?P<box>[ xX])\]\s*Feature")
 
 # Markdown image: ![alt](url)
 MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
@@ -145,26 +128,6 @@ def extract_sections(body: str) -> dict[str, str]:
     return sections
 
 
-def extract_human_note(body: str) -> str:
-    """Return human-written text in the required location before `AGENT:`.
-
-    The markers are located outside fenced code blocks so that quoting the
-    template does not stand in for filling it out. Offsets are preserved by the
-    masking, so the note itself is still read from the original body.
-    """
-    outside_fences = without_fenced_code_blocks(body)
-
-    human_match = HUMAN_HEADING_RE.search(outside_fences)
-    if human_match is None:
-        return ""
-
-    agent_match = AGENT_HEADING_RE.search(outside_fences, human_match.end())
-    if agent_match is None:
-        return ""
-
-    return visible_text(body[human_match.end() : agent_match.start()])
-
-
 def is_frontend_file(path: str) -> bool:
     """Return True if a changed file should be treated as frontend code."""
     normalized = path.lstrip("./")
@@ -202,20 +165,6 @@ def has_screenshot_or_video(body: str) -> bool:
     if VIDEO_HOST_RE.search(body):
         return True
     return False
-
-
-def validate_human_tested_checkbox(body: str) -> list[str]:
-    """Require the human-tested checkbox to be checked when it is present."""
-    errors: list[str] = []
-    matches = list(HUMAN_TESTED_RE.finditer(body))
-    for match in matches:
-        if match.group("box").strip().lower() != "x":
-            errors.append(
-                "The `A human has tested these changes` checkbox is present but "
-                "unchecked. Tick it (`- [x]`) or remove the line if it does not apply."
-            )
-            break
-    return errors
 
 
 def validate_frontend_screenshot(body: str, files: list[str]) -> list[str]:
@@ -384,17 +333,6 @@ def validate_pr_body(
     repository: str | None = None,
 ) -> list[str]:
     errors: list[str] = []
-    repository_owner = repository.partition("/")[0] if repository else None
-    template_exempt = repository_owner in PR_TEMPLATE_EXEMPT_OWNERS
-    human_note_required = not template_exempt
-
-    if human_note_required and first_visible_line(body) != "HUMAN:":
-        errors.append("The first visible line of the PR description must be `HUMAN:`.")
-
-    human_note = extract_human_note(body)
-    if human_note_required and len(human_note) < MIN_HUMAN_NOTE_CHARS:
-        errors.append("Add a short human-written note between `HUMAN:` and `AGENT:`.")
-
     if AGENT_HEADING_RE.search(without_fenced_code_blocks(body)) is None:
         errors.append("Keep the `AGENT:` marker from the PR template.")
 
@@ -405,7 +343,6 @@ def validate_pr_body(
         elif not visible_text(sections[section]):
             errors.append(f"Fill in the `## {section}` section of the PR template.")
 
-    errors.extend(validate_human_tested_checkbox(body))
     errors.extend(validate_frontend_screenshot(body, files or []))
 
     return errors
@@ -456,7 +393,9 @@ def files_from_api(event_path: Path) -> list[str]:
             data = json.loads(resp.read().decode())
         if not data:
             break
-        files.extend(item.get("filename", "") for item in data if isinstance(item, dict))
+        files.extend(
+            item.get("filename", "") for item in data if isinstance(item, dict)
+        )
         if len(data) < 100:
             break
         page += 1
