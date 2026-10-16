@@ -1,5 +1,7 @@
 <!-- Keep this PR as draft until it is ready for review. -->
 
+AGENT:
+
 <!-- Write a concise summary of what changed and link any reviewer artifacts,
 such as files under `.pr/`. For HTML artifacts, include a rendered preview link:
 https://htmlpreview.github.io/?https://github.com/<owner>/<repo>/blob/<commit-sha>/.pr/<file>.html

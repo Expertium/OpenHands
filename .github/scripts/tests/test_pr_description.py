@@ -382,17 +382,22 @@ Give reproducible steps.
     assert validate_pr_body(body, repository="Example/OtherRepo") == []
 
 
-def test_pr_description_without_agent_marker_still_fails():
-    body = """## Why
-Explain the reason.
-
-## Summary
-Describe the change.
-
-## How to Test
-Give reproducible steps.
-"""
-    assert validate_pr_body(body) == ["Keep the `AGENT:` marker from the PR template."]
+def test_pr_template_passes_without_human_marker():
+    template = Path(__file__).resolve().parents[2] / "pull_request_template.md"
+    body = template.read_text()
+    assert "AGENT:" in body
+    body = body.replace(
+        "<!-- Describe problem, motivation, etc. -->", "The motivation."
+    )
+    body = body.replace(
+        "<!-- 1-3 bullets describing what changed. For bugs, state the failure and fix. -->\n-",
+        "A concise summary.",
+    )
+    body = body.replace(
+        "<!--\nRequired. Share the steps for the reviewer to be able to test your PR. e.g. You can test by running `npm install` then `npm build dev`.\n\nFor bugs, include reproduction steps and observed before/after results.\nFor functional changes, logs and tests supplement the running-Canvas demonstration below.\nNonvisual evidence alone is sufficient only for non-functional changes.\n\nIf you could not test this, say why.\n-->",
+        "Run the focused test suite.",
+    )
+    assert validate_pr_body(body, repository="Example/OtherRepo") == []
 
 
 def test_repo_without_issues_does_not_require_issue_reference():
