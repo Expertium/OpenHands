@@ -97,7 +97,6 @@ class EventService {
         options.timestampGte ||
         options.timestampLt
       );
-
       const params = new URLSearchParams();
       params.set("limit", String(cloudLimit));
       if (options.sortOrder) params.set("sort_order", options.sortOrder);
@@ -141,6 +140,8 @@ class EventService {
       conversationId,
     ).search({
       limit,
+      ...(options.kind ? { kind: options.kind } : {}),
+      ...(options.excludeKinds ? { exclude_kind: options.excludeKinds } : {}),
       ...(options.pageId ? { page_id: options.pageId } : {}),
       ...(options.sortOrder ? { sort_order: options.sortOrder } : {}),
       ...(options.timestampGte ? { timestamp__gte: options.timestampGte } : {}),

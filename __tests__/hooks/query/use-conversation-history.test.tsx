@@ -8,7 +8,9 @@ import {
 } from "@tanstack/react-query";
 
 import {
+  HISTORY_EXCLUDED_EVENT_KINDS,
   INITIAL_HISTORY_PAGE_SIZE,
+  INITIAL_HISTORY_PREVIEW_SIZE,
   useConversationHistory,
 } from "#/hooks/query/use-conversation-history";
 import EventService from "#/api/event-service/event-service.api";
@@ -73,7 +75,7 @@ describe("useConversationHistory", () => {
     vi.clearAllMocks();
   });
 
-  it("requests the most recent INITIAL_HISTORY_PAGE_SIZE events sorted desc", async () => {
+  it("requests a small recent preview sorted desc", async () => {
     const v1SearchEventsSpy = vi.spyOn(EventService, "searchEvents");
 
     vi.mocked(useUserConversation).mockReturnValue({
@@ -96,15 +98,15 @@ describe("useConversationHistory", () => {
     });
 
     // Signature: (conversationId, conversationUrl, sessionApiKey, options).
-    // Initial load only fetches the tail (TIMESTAMP_DESC + page-size limit)
-    // so the user sees the most recent 50 events first.
+    // The cold-load preview stays small; older history is paginated on demand.
     expect(EventService.searchEvents).toHaveBeenCalledWith(
       "conv-123",
       null,
       null,
       {
-        limit: INITIAL_HISTORY_PAGE_SIZE,
+        limit: INITIAL_HISTORY_PREVIEW_SIZE,
         sortOrder: "TIMESTAMP_DESC",
+        excludeKinds: HISTORY_EXCLUDED_EVENT_KINDS,
       },
     );
   });
@@ -144,7 +146,7 @@ describe("useConversationHistory", () => {
     expect(result.current.data?.nextPageId).toBe("page-2");
   });
 
-  it("treats a full initial page without next_page_id as having more history", async () => {
+  it("treats a full preview without next_page_id as having more history", async () => {
     vi.mocked(useUserConversation).mockReturnValue({
       data: makeConversation("V1"),
       isLoading: false,
@@ -174,6 +176,36 @@ describe("useConversationHistory", () => {
       expect(result.current.data).toBeDefined();
     });
 
+    expect(result.current.data?.hasMore).toBe(true);
+  });
+  it("marks a full small preview as having older history", async () => {
+    vi.mocked(useUserConversation).mockReturnValue({
+      data: makeConversation("V1"),
+      isLoading: false,
+      isPending: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.spyOn(EventService, "searchEvents").mockResolvedValue(
+      makePage(
+        Array.from({ length: INITIAL_HISTORY_PREVIEW_SIZE }, (_, index) =>
+          makeEvent(`preview-${index}`),
+        ),
+        null,
+      ),
+    );
+
+    const { result } = renderHook(
+      () => useConversationHistory("conv-preview-page"),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.data?.events).toHaveLength(
+      INITIAL_HISTORY_PREVIEW_SIZE,
+    );
     expect(result.current.data?.hasMore).toBe(true);
   });
 
@@ -475,24 +507,28 @@ describe("useConversationHistory cache key stability", () => {
 
     it("derives afterSeq from the count read before the page", async () => {
       withUrl();
-      const calls: string[] = [];
+      let countResolved = false;
       vi.spyOn(EventService, "getEventCount").mockImplementation(async () => {
-        calls.push("count");
+        await Promise.resolve();
+        countResolved = true;
         return 120;
       });
-      vi.spyOn(EventService, "searchEvents").mockImplementation(async () => {
-        calls.push("search");
-        return makePage([makeEvent()]);
-      });
+      vi.spyOn(EventService, "searchEvents").mockImplementation(
+        async (_conversationId, _url, _key, options) => {
+          expect(countResolved).toBe(true);
+          expect(options?.excludeKinds).toEqual(HISTORY_EXCLUDED_EVENT_KINDS);
+          return makePage([makeEvent("evt-preview")]);
+        },
+      );
 
       const { result } = renderHook(() => useConversationHistory("conv-seq"), {
         wrapper,
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      // Count first: anything appended between the two reads has
-      // seq >= count, so it is replayed rather than skipped.
-      expect(calls).toEqual(["count", "search"]);
+      // Count finishes before the preview request so the socket cursor can't
+      // miss events appended between the cursor snapshot and history page.
+      expect(EventService.searchEvents).toHaveBeenCalledTimes(1);
       expect(result.current.data?.afterSeq).toBe(119);
     });
 
@@ -501,8 +537,11 @@ describe("useConversationHistory cache key stability", () => {
       vi.spyOn(EventService, "getEventCount").mockRejectedValue(
         new Error("boom"),
       );
-      vi.spyOn(EventService, "searchEvents").mockResolvedValue(
-        makePage([makeEvent("evt-a")]),
+      vi.spyOn(EventService, "searchEvents").mockImplementation(
+        async (_conversationId, _url, _key, options) => {
+          expect(options?.excludeKinds).toEqual(HISTORY_EXCLUDED_EVENT_KINDS);
+          return makePage([makeEvent("evt-a")]);
+        },
       );
 
       const { result } = renderHook(

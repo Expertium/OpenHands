@@ -12,6 +12,10 @@ export type EventSortOrder = "TIMESTAMP" | "TIMESTAMP_DESC";
 export interface EventSearchOptions {
   /** Maximum number of events to return per page (server caps at 100). */
   limit?: number;
+  /** Fully qualified event class filter supported by the local API. */
+  kind?: string;
+  /** Fully qualified event classes to omit from local API results. */
+  excludeKinds?: string[];
   /** Page ID for pagination. */
   pageId?: string;
   /** Sort order for the underlying server query. */

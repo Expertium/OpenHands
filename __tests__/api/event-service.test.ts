@@ -124,6 +124,19 @@ describe("EventService.searchEvents — cloud branch", () => {
     expect(vi.mocked(callCloudProxy)).toHaveBeenCalledTimes(1);
   });
 
+  it("does not forward local event exclusions to the Cloud API", async () => {
+    await EventService.searchEvents("conv-1", null, null, {
+      limit: 5,
+      excludeKinds: [
+        "openhands.sdk.event.llm_completion_log.LLMCompletionLogEvent",
+      ],
+    });
+
+    const proxyCall = vi.mocked(callCloudProxy).mock.calls[0][0];
+    const url = new URL(`https://x${proxyCall.path}`);
+    expect(url.searchParams.has("exclude_kind")).toBe(false);
+  });
+
   it("stops pagination when server returns fewer items than limit", async () => {
     vi.mocked(callCloudProxy).mockResolvedValueOnce({
       items: [{ id: "evt-1" }, { id: "evt-2" }],

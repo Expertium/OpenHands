@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+import { getActiveBackend } from "#/api/backend-registry/active-store";
 import EventService from "#/api/event-service/event-service.api";
 import { useUserConversation } from "#/hooks/query/use-user-conversation";
 import type { OpenHandsEvent } from "#/types/agent-server/core";
 
-/**
- * Number of events to load on the initial REST history fetch and on each
- * subsequent "scroll-up" page. The agent server caps `limit` at 100.
- */
+/** Number of events to load per history page. The server caps this at 100. */
 export const INITIAL_HISTORY_PAGE_SIZE = 50;
+
+/** Keep the cold-load preview small; older history is loaded on demand. */
+export const INITIAL_HISTORY_PREVIEW_SIZE = 5;
+export const HISTORY_EXCLUDED_EVENT_KINDS = [
+  "openhands.sdk.event.llm_completion_log.LLMCompletionLogEvent",
+];
 
 export interface ConversationHistoryPage {
   /** Events in chronological (oldest → newest) order. */
@@ -26,13 +30,10 @@ export interface ConversationHistoryPage {
 }
 
 /**
- * Loads the most recent conversation events via REST. The server query is
- * sorted `TIMESTAMP_DESC` so we can request just the tail of the conversation;
- * we reverse the result to chronological order before handing it to callers.
- *
- * Older events are loaded on demand by `useLoadOlderEvents` once the user
- * scrolls up. The session socket then resumes from `afterSeq`, so it neither
- * re-receives the history we already have nor misses what landed meanwhile.
+ * Loads a small recent conversation preview via REST, then reverses it to
+ * chronological order. Older events are loaded on demand by `useLoadOlderEvents`
+ * when the user scrolls up. A separate unfiltered count seeds the session
+ * socket cursor so it doesn't replay the entire log or miss intervening events.
  */
 export const useConversationHistory = (conversationId?: string) => {
   const { data: conversation } = useUserConversation(conversationId ?? null);
@@ -70,13 +71,20 @@ export const useConversationHistory = (conversationId?: string) => {
         }
       }
 
+      const previewOptions = {
+        limit: INITIAL_HISTORY_PREVIEW_SIZE,
+        sortOrder: "TIMESTAMP_DESC" as const,
+      };
+      const isLocalBackend = getActiveBackend().backend.kind !== "cloud";
       const page = await EventService.searchEvents(
         conversationId,
-        conversation?.conversation_url ?? null,
+        conversationUrl,
         conversation?.session_api_key ?? null,
         {
-          limit: INITIAL_HISTORY_PAGE_SIZE,
-          sortOrder: "TIMESTAMP_DESC",
+          ...previewOptions,
+          ...(isLocalBackend
+            ? { excludeKinds: HISTORY_EXCLUDED_EVENT_KINDS }
+            : {}),
         },
       );
 
@@ -91,7 +99,8 @@ export const useConversationHistory = (conversationId?: string) => {
       return {
         events,
         hasMore:
-          !!page.next_page_id || page.items.length >= INITIAL_HISTORY_PAGE_SIZE,
+          !!page.next_page_id ||
+          page.items.length >= INITIAL_HISTORY_PREVIEW_SIZE,
         nextPageId: page.next_page_id ?? null,
         afterSeq: typeof count === "number" ? count - 1 : null,
       };

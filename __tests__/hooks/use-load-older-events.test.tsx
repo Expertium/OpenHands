@@ -17,6 +17,9 @@ import type { EventSearchPage } from "#/api/event-service/event-service.types";
 vi.mock("#/api/event-service/event-service.api");
 vi.mock("#/hooks/query/use-user-conversation");
 vi.mock("#/hooks/query/use-conversation-history", () => ({
+  HISTORY_EXCLUDED_EVENT_KINDS: [
+    "openhands.sdk.event.llm_completion_log.LLMCompletionLogEvent",
+  ],
   INITIAL_HISTORY_PAGE_SIZE: 50,
   useConversationHistory: vi.fn(() => ({
     data: undefined,
@@ -215,6 +218,9 @@ describe("useLoadOlderEvents", () => {
         limit: INITIAL_HISTORY_PAGE_SIZE,
         sortOrder: "TIMESTAMP_DESC",
         timestampLt: "2024-06-01T00:00:00Z",
+        excludeKinds: [
+          "openhands.sdk.event.llm_completion_log.LLMCompletionLogEvent",
+        ],
       },
     );
 

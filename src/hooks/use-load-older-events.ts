@@ -1,8 +1,10 @@
 import React from "react";
+import { getActiveBackend } from "#/api/backend-registry/active-store";
 import EventService from "#/api/event-service/event-service.api";
 import { useUserConversation } from "#/hooks/query/use-user-conversation";
 import { useEventStore } from "#/stores/use-event-store";
 import {
+  HISTORY_EXCLUDED_EVENT_KINDS,
   INITIAL_HISTORY_PAGE_SIZE,
   useConversationHistory,
 } from "#/hooks/query/use-conversation-history";
@@ -146,6 +148,9 @@ export const useLoadOlderEvents = (
           limit: INITIAL_HISTORY_PAGE_SIZE,
           sortOrder: "TIMESTAMP_DESC",
           timestampLt: oldestTimestamp,
+          ...(getActiveBackend().backend.kind !== "cloud"
+            ? { excludeKinds: HISTORY_EXCLUDED_EVENT_KINDS }
+            : {}),
         },
       );
 
