@@ -20,16 +20,9 @@ function ChatStatusIndicator({
     >
       <AnimatePresence mode="wait">
         {/* Dot */}
-        <motion.span
-          key={`dot-${status}`}
-          className="flex-shrink-0 animate-[pulse_1.2s_ease-in-out_infinite]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+        <span className="flex-shrink-0">
           <DebugStackframeDot className="w-4 h-4" color={statusColor} />
-        </motion.span>
+        </span>
 
         {/* Text */}
         <motion.span
