@@ -57,6 +57,53 @@ describe("optimistic-user-message-store", () => {
     expect(typeof pending[0].timestamp).toBe("string");
   });
 
+  it("generates UUID client message IDs", () => {
+    const id = useOptimisticUserMessageStore
+      .getState()
+      .enqueuePendingMessage({ conversationId: CONVO, text: "hello" });
+
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it("matches a durable event by its client UUID before content", () => {
+    const store = useOptimisticUserMessageStore.getState();
+    const id = store.enqueuePendingMessage({
+      conversationId: CONVO,
+      text: "retry safely",
+    });
+
+    const consumed = store.consumeMatchingPendingMessage(
+      CONVO,
+      "different rendered body",
+      {
+        id,
+        timestamp: new Date().toISOString(),
+      },
+    );
+
+    expect(consumed?.id).toBe(id);
+    expect(
+      useOptimisticUserMessageStore.getState().pendingMessages,
+    ).toHaveLength(0);
+  });
+
+  it("does not time out a message after server acceptance", () => {
+    const store = useOptimisticUserMessageStore.getState();
+    const id = store.enqueuePendingMessage({
+      conversationId: CONVO,
+      text: "accepted",
+    });
+
+    store.markPendingMessageAccepted(id);
+    vi.advanceTimersByTime(PENDING_MESSAGE_TIMEOUT_MS);
+
+    expect(
+      useOptimisticUserMessageStore.getState().pendingMessages[0].status,
+    ).toBe("accepted");
+  });
+
   it("preserves FIFO order across multiple enqueues", () => {
     const store = useOptimisticUserMessageStore.getState();
     store.enqueuePendingMessage({ conversationId: CONVO, text: "first" });

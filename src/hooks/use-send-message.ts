@@ -4,7 +4,8 @@ import { useOptionalConversationId } from "#/hooks/use-conversation-id";
 import { MessageContent } from "#/api/conversation-service/agent-server-conversation-service.types";
 
 interface SendResult {
-  queued: boolean; // true if message was queued for later delivery
+  queued: boolean;
+  accepted: boolean;
 }
 
 /**
@@ -30,6 +31,7 @@ export function useSendMessage() {
             image_urls?: string[];
             file_urls?: string[];
             timestamp?: string;
+            client_message_id?: string;
           };
         };
 
@@ -54,12 +56,15 @@ export function useSendMessage() {
           const result = await conversationContext.sendMessage({
             role: "user",
             content,
+            ...(args.client_message_id
+              ? { client_message_id: args.client_message_id }
+              : {}),
           });
           return result;
         }
-        return { queued: false };
+        return { queued: false, accepted: false };
       }
-      return { queued: false };
+      return { queued: false, accepted: false };
     },
     [conversationContext, conversationId],
   );

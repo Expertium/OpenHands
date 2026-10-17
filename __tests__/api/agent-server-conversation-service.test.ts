@@ -1551,19 +1551,23 @@ describe("AgentServerConversationService", () => {
       __resetActiveStoreForTests();
     });
 
-    it("sends a local message to the selected runtime and returns the accepted message", async () => {
+    it("sends a local message with its stable client ID", async () => {
       mockSendEvent.mockResolvedValue(undefined);
+      const request = {
+        ...message,
+        client_message_id: "4f945d38-df26-46bd-88a8-0e9cc50c4ac2",
+      };
 
       const result = await AgentServerConversationService.sendMessage(
         "conv-1",
-        message,
+        request,
         {
           conversationUrl: "http://runtime.internal:9000",
           sessionApiKey: "runtime-key",
         },
       );
 
-      expect(mockSendEvent).toHaveBeenCalledWith("conv-1", message, {
+      expect(mockSendEvent).toHaveBeenCalledWith("conv-1", request, {
         run: true,
       });
       expect(ConversationClient).toHaveBeenCalledWith(
@@ -1572,7 +1576,7 @@ describe("AgentServerConversationService", () => {
           apiKey: "runtime-key",
         }),
       );
-      expect(result).toEqual(message);
+      expect(result).toEqual(request);
     });
 
     it("sends a cloud message with runtime credentials supplied by the caller", async () => {

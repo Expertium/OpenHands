@@ -21,6 +21,9 @@ export const useHandleBuildPlanClick = () => {
   const markPendingMessageError = useOptimisticUserMessageStore(
     (state) => state.markPendingMessageError,
   );
+  const markPendingMessageAccepted = useOptimisticUserMessageStore(
+    (state) => state.markPendingMessageAccepted,
+  );
 
   const handleBuildPlanClick = useCallback(
     (event?: React.MouseEvent<HTMLButtonElement> | KeyboardEvent) => {
@@ -44,18 +47,33 @@ export const useHandleBuildPlanClick = () => {
             timestamp,
           })
         : null;
-      send(createChatMessage(buildPrompt, [], [], timestamp)).catch((error) => {
-        if (!pendingId) return;
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to send message";
-        markPendingMessageError(pendingId, errorMessage);
-      });
+      send(
+        createChatMessage(
+          buildPrompt,
+          [],
+          [],
+          timestamp,
+          pendingId ?? undefined,
+        ),
+      )
+        .then((result) => {
+          if (pendingId && result.accepted) {
+            markPendingMessageAccepted(pendingId);
+          }
+        })
+        .catch((error) => {
+          if (!pendingId) return;
+          const errorMessage =
+            error instanceof Error ? error.message : "Failed to send message";
+          markPendingMessageError(pendingId, errorMessage);
+        });
     },
     [
       setConversationMode,
       send,
       conversationId,
       enqueuePendingMessage,
+      markPendingMessageAccepted,
       markPendingMessageError,
     ],
   );

@@ -965,7 +965,7 @@ describe("Conversation websocket behavior", () => {
     );
     await expect(
       contextCapture.current?.sendMessage(makeSendRequest("new socket")),
-    ).resolves.toEqual({ queued: false });
+    ).resolves.toEqual({ queued: false, accepted: false });
     expect(mainSocket.send).toHaveBeenCalledWith(
       JSON.stringify({ ...makeSendRequest("new socket"), run: true }),
     );
@@ -986,7 +986,7 @@ describe("Conversation websocket behavior", () => {
 
     await expect(
       contextCapture.current?.sendMessage(makeSendRequest("code message")),
-    ).resolves.toEqual({ queued: false });
+    ).resolves.toEqual({ queued: false, accepted: false });
     expect(mainSocket.send).toHaveBeenCalledWith(
       JSON.stringify({ ...makeSendRequest("code message"), run: true }),
     );
@@ -994,7 +994,7 @@ describe("Conversation websocket behavior", () => {
     useConversationStore.setState({ conversationMode: "plan" });
     await expect(
       contextCapture.current?.sendMessage(makeSendRequest("plan message")),
-    ).resolves.toEqual({ queued: false });
+    ).resolves.toEqual({ queued: false, accepted: false });
     expect(planningSocket.send).toHaveBeenCalledWith(
       JSON.stringify({ ...makeSendRequest("plan message"), run: true }),
     );
@@ -1005,7 +1005,7 @@ describe("Conversation websocket behavior", () => {
 
     await expect(
       contextCapture.current?.sendMessage(makeSendRequest("queue me")),
-    ).resolves.toEqual({ queued: true });
+    ).resolves.toEqual({ queued: true, accepted: true });
     expect(socketCapture.queueMessage).toHaveBeenCalledWith(
       "conv-main",
       { role: "user", content: makeSendRequest("queue me").content },
