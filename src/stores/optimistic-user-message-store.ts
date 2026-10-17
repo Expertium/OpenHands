@@ -4,7 +4,7 @@ import { parseDateAsUTC } from "#/utils/format-time-delta";
 import { matchesPendingConversationId } from "#/utils/pending-task-message-link";
 import type { BaseEvent } from "#/types/agent-server/core/base/event";
 
-export type PendingUserMessageStatus = "sending" | "error";
+export type PendingUserMessageStatus = "sending" | "accepted" | "error";
 
 /**
  * How long a pending message is allowed to stay in "sending" state before we
@@ -68,6 +68,8 @@ interface OptimisticUserMessageActions {
    * it's still in "sending" state when the timer fires.
    */
   enqueuePendingMessage: (payload: EnqueuePendingMessagePayload) => string;
+  /** Mark a pending message as accepted while waiting for its event echo. */
+  markPendingMessageAccepted: (id: string) => void;
   /** Mark a pending message as failed (the API rejected it). */
   markPendingMessageError: (id: string, errorMessage?: string) => void;
   /** Mark a pending message as sending again (used when retrying). */
@@ -101,12 +103,7 @@ const initialState: OptimisticUserMessageState = {
   confirmedEventIds: new Set(),
 };
 
-// Use a timestamp + random suffix instead of a module-level counter so ids
-// stay unique across test resets and don't accumulate state between runs.
-// `crypto.randomUUID` would be ideal but isn't available in older test
-// environments, so a base36 random suffix is a safe lowest-common-denominator.
-const generatePendingId = (): string =>
-  `pending-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const generatePendingId = (): string => crypto.randomUUID();
 
 const latestServerTimestamp = (conversationId: string): number | undefined => {
   const { events, loadedConversationId } = useEventStore.getState();
@@ -164,6 +161,13 @@ export const useOptimisticUserMessageStore = create<OptimisticUserMessageStore>(
       return id;
     },
 
+    markPendingMessageAccepted: (id) =>
+      set((state) => ({
+        pendingMessages: state.pendingMessages.map((message) =>
+          message.id === id ? { ...message, status: "accepted" } : message,
+        ),
+      })),
+
     markPendingMessageError: (id, errorMessage) =>
       set((state) => ({
         pendingMessages: state.pendingMessages.map((message) =>
@@ -200,19 +204,24 @@ export const useOptimisticUserMessageStore = create<OptimisticUserMessageStore>(
       const confirmedAt = parseDateAsUTC(event.timestamp).getTime();
       set((state) => {
         if (state.confirmedEventIds.has(confirmationId)) return state;
-        // Browser clocks cannot establish ordering against server event history.
+        const matchesConversation = (message: PendingUserMessage) =>
+          matchesPendingConversationId(conversationId, message.conversationId);
+        const exactMatch = state.pendingMessages.findIndex(
+          (message) => message.id === event.id && matchesConversation(message),
+        );
+        // Only legacy events without a client UUID need timestamp and body heuristics.
         const matches = (message: PendingUserMessage) =>
-          matchesPendingConversationId(
-            conversationId,
-            message.conversationId,
-          ) &&
+          matchesConversation(message) &&
           (message.afterTimestamp === undefined ||
             confirmedAt > message.afterTimestamp) &&
           message.content.trim() === content.trim();
-        let target = state.pendingMessages.findIndex(
-          (message) => message.status === "sending" && matches(message),
-        );
-        if (target === -1) target = state.pendingMessages.findIndex(matches);
+        let target = exactMatch;
+        if (target === -1) {
+          target = state.pendingMessages.findIndex(
+            (message) => message.status === "sending" && matches(message),
+          );
+          if (target === -1) target = state.pendingMessages.findIndex(matches);
+        }
         if (target === -1) return state;
         consumed = state.pendingMessages[target];
         return {

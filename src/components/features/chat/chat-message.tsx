@@ -15,7 +15,7 @@ import {
   USER_MESSAGE_LINE_HEIGHT_PX,
 } from "./user-message-body";
 
-export type ChatMessagePendingStatus = "sending" | "error";
+export type ChatMessagePendingStatus = "sending" | "accepted" | "error";
 
 interface ChatMessageProps {
   type: SourceType;
@@ -81,6 +81,7 @@ export function ChatMessage({
   const isPendingUserMessage =
     type === "user" &&
     (pendingStatus === "error" || pendingStatus === "sending");
+  const hasPendingState = pendingStatus != null;
   const canStopPendingMessage = pendingStatus === "sending" && onStop != null;
   const showStopButton = canStopPendingMessage && isHovering;
   const useTruncatedUserBody = type === "user" && pendingStatus == null;
@@ -157,13 +158,14 @@ export function ChatMessage({
           type === "agent" &&
           "border border-[#597ff4] bg-tertiary p-4 mt-2",
         pendingStatus === "error" && "border border-status-error/40",
+        pendingStatus === "accepted" && "last:mb-4",
         !isPendingUserMessage && "last:mb-4",
       )}
     >
       <div
         className={cn(
           "absolute -top-2.5 -right-2.5 z-10",
-          !isHovering || pendingStatus === "sending" ? "hidden" : "flex",
+          !isHovering || hasPendingState ? "hidden" : "flex",
           "items-center gap-1",
         )}
         onClick={(event) => event.stopPropagation()}

@@ -31,6 +31,9 @@ export function PendingUserMessages() {
   const markPendingMessageError = useOptimisticUserMessageStore(
     (state) => state.markPendingMessageError,
   );
+  const markPendingMessageAccepted = useOptimisticUserMessageStore(
+    (state) => state.markPendingMessageAccepted,
+  );
   const markPendingMessageSending = useOptimisticUserMessageStore(
     (state) => state.markPendingMessageSending,
   );
@@ -60,19 +63,21 @@ export function PendingUserMessages() {
       const message = useOptimisticUserMessageStore
         .getState()
         .pendingMessages.find((entry) => entry.id === id);
-      if (!message) return;
+      if (!message || message.status === "accepted") return;
 
       markPendingMessageSending(id);
 
       try {
-        await send(
+        const result = await send(
           createChatMessage(
             message.text,
             message.imageUrls,
             message.fileUrls,
             message.timestamp,
+            message.id,
           ),
         );
+        if (result.accepted) markPendingMessageAccepted(id);
       } catch (error) {
         const errorMessage =
           error instanceof Error
@@ -81,7 +86,13 @@ export function PendingUserMessages() {
         markPendingMessageError(id, errorMessage);
       }
     },
-    [send, markPendingMessageError, markPendingMessageSending, t],
+    [
+      send,
+      markPendingMessageAccepted,
+      markPendingMessageError,
+      markPendingMessageSending,
+      t,
+    ],
   );
 
   const handleStop = React.useCallback(

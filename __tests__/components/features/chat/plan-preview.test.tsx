@@ -48,10 +48,18 @@ vi.mock("#/hooks/use-send-message", () => ({
 }));
 
 vi.mock("#/services/chat-service", () => ({
-  createChatMessage: vi.fn((content, imageUrls, fileUrls, timestamp) => ({
-    action: "message",
-    args: { content, image_urls: imageUrls, file_urls: fileUrls, timestamp },
-  })),
+  createChatMessage: vi.fn(
+    (content, imageUrls, fileUrls, timestamp, clientMessageId) => ({
+      action: "message",
+      args: {
+        content,
+        image_urls: imageUrls,
+        file_urls: fileUrls,
+        timestamp,
+        client_message_id: clientMessageId,
+      },
+    }),
+  ),
 }));
 
 vi.mock("#/hooks/use-conversation-id", () => ({
@@ -178,6 +186,7 @@ describe("PlanPreview", () => {
       expectedPrompt,
       [],
       [],
+      expect.any(String),
       expect.any(String),
     );
     expect(mockSend).toHaveBeenCalledTimes(1);

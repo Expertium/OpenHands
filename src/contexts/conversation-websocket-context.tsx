@@ -92,7 +92,8 @@ export type WebSocketConnectionState =
   | "CLOSING";
 
 interface SendMessageResult {
-  queued: boolean; // true if message was queued for later delivery, false if sent immediately
+  queued: boolean;
+  accepted: boolean;
 }
 
 interface ConversationWebSocketContextType {
@@ -1341,15 +1342,10 @@ export function ConversationWebSocketProvider({
         try {
           await new ConversationClient(getAgentServerClientOptions()).sendEvent(
             targetConversationId,
-            {
-              role: "user",
-              content: message.content,
-            },
+            message,
             { run: true },
           );
-          // Message queued successfully - it will be delivered when ready
-          // Return queued: true so caller knows not to show optimistic UI
-          return { queued: true };
+          return { queued: true, accepted: true };
         } catch (error) {
           const errorMessage =
             error instanceof Error
@@ -1364,7 +1360,7 @@ export function ConversationWebSocketProvider({
         // Send message through WebSocket as JSON with run: true so the
         // agent loop starts automatically in async mode.
         currentSocket.send(JSON.stringify({ ...message, run: true }));
-        return { queued: false };
+        return { queued: false, accepted: false };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Failed to send message";

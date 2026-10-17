@@ -113,6 +113,9 @@ export function ChatInterface({
   const markPendingMessageError = useOptimisticUserMessageStore(
     (state) => state.markPendingMessageError,
   );
+  const markPendingMessageAccepted = useOptimisticUserMessageStore(
+    (state) => state.markPendingMessageAccepted,
+  );
   const pendingMessages = useOptimisticUserMessageStore(
     (state) => state.pendingMessages,
   );
@@ -417,9 +420,16 @@ export function ChatInterface({
     setMessageToSend("");
 
     try {
-      await send(
-        createChatMessage(prompt, imageUrls, uploadedFiles, timestamp),
+      const result = await send(
+        createChatMessage(
+          prompt,
+          imageUrls,
+          uploadedFiles,
+          timestamp,
+          pendingId,
+        ),
       );
+      if (result.accepted) markPendingMessageAccepted(pendingId);
     } catch (sendError) {
       const sendErrorMessage =
         sendError instanceof Error
