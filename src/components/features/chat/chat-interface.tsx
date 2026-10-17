@@ -653,7 +653,7 @@ export function ChatInterface({
                 classification={errorClassification}
                 onDismiss={removeErrorMessage}
                 onRetry={
-                  errorMessage === SERVER_CONNECTION_ERROR_MESSAGE
+                  errorMessage.startsWith(SERVER_CONNECTION_ERROR_MESSAGE)
                     ? () => conversationWebSocket?.reconnect()
                     : undefined
                 }
