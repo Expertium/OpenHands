@@ -127,9 +127,6 @@ function getWebSocketErrorDetail(event: Event): string {
   return "WebSocket error; the browser did not provide a close code.";
 }
 
-const shouldReconnectConversationSocket = (event: CloseEvent) =>
-  event.code !== 1013 || event.reason !== "frame_too_large";
-
 /**
  * Extract the text body of an echoed user `MessageEvent` for matching against
  * the optimistic pending-message queue. The server wraps the original
@@ -1137,7 +1134,7 @@ export function ConversationWebSocketProvider({
       sessionApiKey,
       reconnect: {
         enabled: true,
-        shouldReconnect: shouldReconnectConversationSocket,
+        maxAttempts: 8,
       },
       onOpen: () => {
         setMainConnectionState("OPEN");
@@ -1191,7 +1188,7 @@ export function ConversationWebSocketProvider({
       sessionApiKey: planningApiKey,
       reconnect: {
         enabled: true,
-        shouldReconnect: shouldReconnectConversationSocket,
+        maxAttempts: 8,
       },
       onOpen: async () => {
         setPlanningConnectionState("OPEN");

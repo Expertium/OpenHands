@@ -474,27 +474,14 @@ describe("Conversation websocket behavior", () => {
     // The planner has no REST preload, so it replays its whole log.
     expect(queryParamsOf(planningOptions())).toEqual({ after_seq: "-1" });
     expect(planningOptions().sessionApiKey).toBe("session-key");
-    expect(mainOptions().reconnect).toMatchObject({ enabled: true });
-    expect(planningOptions().reconnect).toMatchObject({ enabled: true });
-    const reconnect = mainOptions().reconnect?.shouldReconnect;
-    const planningReconnect = planningOptions().reconnect?.shouldReconnect;
-    expect(reconnect).toBeTypeOf("function");
-    expect(planningReconnect).toBeTypeOf("function");
-    for (const shouldReconnect of [reconnect, planningReconnect]) {
-      expect(
-        shouldReconnect?.(
-          new CloseEvent("close", { code: 1013, reason: "frame_too_large" }),
-        ),
-      ).toBe(false);
-      expect(
-        shouldReconnect?.(
-          new CloseEvent("close", {
-            code: 1013,
-            reason: "temporary_overload",
-          }),
-        ),
-      ).toBe(true);
-    }
+    expect(mainOptions().reconnect).toMatchObject({
+      enabled: true,
+      maxAttempts: 8,
+    });
+    expect(planningOptions().reconnect).toMatchObject({
+      enabled: true,
+      maxAttempts: 8,
+    });
   });
 
   it("waits for the first history load before opening the main socket", () => {
